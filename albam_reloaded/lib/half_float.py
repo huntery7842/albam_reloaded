@@ -3,7 +3,8 @@ import struct
 
 
 def unpack_half_float(float16):
-    # A function useful to read half-float (used in the uv coords), not supported by the struct module
+    # A function useful to read half-float (used in the uv coords),
+    # not supported by the struct module # (actually, no it is)
     # http://davidejones.com/blog/1413-python-precision-floating-point/
 
     # TODO: check limitations on the input and raise exceptions

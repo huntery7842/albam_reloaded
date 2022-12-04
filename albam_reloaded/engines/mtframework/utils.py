@@ -1,15 +1,12 @@
-from ast import Return
 import ctypes
 from collections import Counter
 import ntpath
 
-from albam_reloaded.engines.mtframework import tex
-
-from ...exceptions import BuildMeshError
-from ...engines.mtframework.mod_156 import (
+from albam_reloaded.exceptions import BuildMeshError
+from albam_reloaded.engines.mtframework.mod_156 import (
     VERTEX_FORMATS_TO_CLASSES,
 )
-from ...lib.structure import get_size
+from albam_reloaded.lib.structure import get_size
 
 
 def get_vertices_array(mod, mesh):
@@ -67,7 +64,7 @@ def get_non_deform_bone_indices(mod):
                     ]
                 except IndexError:
                     # Behavior not observed on original files
-                    real_bonde_index = bone_index
+                    real_bone_index = bone_index
                 active_bone_indices.add(real_bone_index)
 
     return bone_indices.difference(active_bone_indices)
@@ -202,7 +199,7 @@ def blender_texture_to_texture_code(blender_texture_image_node):
     color_out = blender_texture_image_node.outputs["Color"]
     try:
         socket_name = color_out.links[0].to_socket.name
-    except:
+    except Exception:
         print("the texture has no connections")
         return None
 

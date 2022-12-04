@@ -3,8 +3,8 @@ import ntpath
 import os
 import zlib
 
+from albam_reloaded.lib.structure import DynamicStructure
 from .mappers import FILE_ID_TO_EXTENSION, EXTENSION_TO_FILE_ID
-from ...lib.structure import DynamicStructure
 
 PADDING_SIZE = 32768
 
@@ -65,7 +65,7 @@ class Arc(DynamicStructure):
             if not os.path.exists(file_dir):
                 os.makedirs(file_dir)
             with open(file_path, "wb") as w:
-                w.write(zlib.decompress(data[offset : offset + fe.zsize]))
+                w.write(zlib.decompress(data[offset: offset + fe.zsize]))
             offset += fe.zsize
 
     @classmethod

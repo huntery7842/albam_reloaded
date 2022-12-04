@@ -12,9 +12,9 @@ from ctypes import (
     c_ubyte,
 )
 
-from ...engines.mtframework.defaults import DEFAULT_MATERIAL, DEFAULT_MESH
-from ...lib.structure import DynamicStructure
-from ...registry import blender_registry
+from albam_reloaded.lib.structure import DynamicStructure
+from albam_reloaded.registry import blender_registry
+from .defaults import DEFAULT_MATERIAL, DEFAULT_MESH
 
 
 def unk_data_depends_on_other_unk(tmp_struct):
@@ -117,7 +117,8 @@ class BonePalette(Structure):
     )
 
     _comments_ = {
-        "unk_01": "Seems to be the count of meaninful values out of the 32 bytes, needs verification"
+        # TODO: verify
+        "unk_01": "Seems to be the count of meaninful values out of the 32 bytes"
     }
 
 

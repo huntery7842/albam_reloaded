@@ -5,8 +5,6 @@ from itertools import chain
 import math
 import ntpath
 import os
-import re
-import struct
 import tempfile
 
 try:
@@ -15,9 +13,9 @@ try:
 except ImportError:
     pass
 
-from ...registry import blender_registry
-from ...exceptions import ExportError
-from ...engines.mtframework.mod_156 import (
+from albam_reloaded.registry import blender_registry
+from albam_reloaded.exceptions import ExportError
+from albam_reloaded.engines.mtframework.mod_156 import (
     Mesh156,
     WeightBound,
     MaterialData,
@@ -25,18 +23,18 @@ from ...engines.mtframework.mod_156 import (
     CLASSES_TO_VERTEX_FORMATS,
     VERTEX_FORMATS_TO_CLASSES,
 )
-from ...engines.mtframework import Arc, Mod156, Tex112
-from ...engines.mtframework.utils import (
+from albam_reloaded.engines.mtframework import Arc, Mod156, Tex112
+from albam_reloaded.engines.mtframework.utils import (
     vertices_export_locations,
     blender_texture_to_texture_code,
     get_texture_dirs,
     get_default_texture_dir,
 )
-from ...lib.half_float import pack_half_float
-from ...lib.structure import get_offset
-from ...lib.geometry import z_up_to_y_up
-from ...lib.misc import ntpath_to_os_path
-from ...lib.blender import (
+from albam_reloaded.lib.half_float import pack_half_float
+from albam_reloaded.lib.structure import get_offset
+from albam_reloaded.lib.geometry import z_up_to_y_up
+from albam_reloaded.lib.misc import ntpath_to_os_path
+from albam_reloaded.lib.blender import (
     triangles_list_to_triangles_strip,
     get_textures_from_the_material,
     get_textures_from_blender_objects,
@@ -49,7 +47,8 @@ from ...lib.blender import (
     get_model_bounding_sphere,
 )
 
-# Until it's needed, we simplify modding by exporting all meshes with the always-visible level of detail
+# Until it's needed, we simplify modding by exporting all meshes with
+# the always-visible level of detail (255).
 # This way one doesn't need to care about them
 # We might give the ability to create LOD as an advanced feature.
 EXPORT_LEVEL_OF_DETAIL = 255
@@ -152,7 +151,7 @@ def export_mod156(parent_blender_object):
 
     first_children = [child for child in parent_blender_object.children]
     blender_meshes = [c for c in first_children if c.type == "MESH"]
-    if bpy.context.scene.albam_export_settings.export_visible_bool == True:
+    if bpy.context.scene.albam_export_settings.export_visible_bool is True:
         visible_meshes = [mesh for mesh in blender_meshes if mesh.visible_get()]
         blender_meshes = visible_meshes
 
@@ -160,7 +159,7 @@ def export_mod156(parent_blender_object):
     if not blender_meshes:
         children_objects = list(chain.from_iterable(child.children for child in first_children))
         blender_meshes = [c for c in children_objects if c.type == "MESH"]
-        if bpy.context.scene.albam_export_settings.export_visible_bool == True:
+        if bpy.context.scene.albam_export_settings.export_visible_bool is True:
             visible_meshes = [mesh for mesh in blender_meshes if mesh.visible_get()]
             blender_meshes = visible_meshes
 
@@ -761,12 +760,10 @@ def _export_textures_and_materials(blender_objects, saved_mod):
                 texture_index = (
                     textures.index(texture_data[0]) + 1
                 )  # get the texture data index,  texture_indices expects index-1 based
-            except:
-                raise ExportError(
-                    "No texture data container linked with {} texture was found. Please create it before the export ".format(
-                        texture
-                    )
-                )
+            except Exception:
+                msg = (f"No texture data container linked with {texture} texture was found. "
+                       "Please create it before the export")
+                raise ExportError(msg)
 
             texture_code = blender_texture_to_texture_code(texture_node)
             if texture_code is None:

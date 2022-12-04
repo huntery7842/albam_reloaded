@@ -7,8 +7,12 @@ except ImportError:
 
     bpy = Mock()
 
-from .registry import blender_registry
-from .engines.mtframework.tools import *
+from albam_reloaded.registry import blender_registry
+from albam_reloaded.engines.mtframework.tools import (
+    show_message_box,
+    split_UV_seams_operator,
+    select_invalid_meshes_operator
+)
 
 
 class AlbamImportedItemName(bpy.types.PropertyGroup):  #
@@ -16,26 +20,31 @@ class AlbamImportedItemName(bpy.types.PropertyGroup):  #
     All imported object names are saved here to then show them in the
     export list
     """
-
-    name: bpy.props.StringProperty(name="Imported Item", default="Unknown")
+    NAME = bpy.props.StringProperty(name="Imported Item", default="Unknown")
+    name: NAME
 
 
 class AlbamImportedItem(bpy.types.PropertyGroup):
     """Class for bpy.types.Object.albam_imported_item __init__.py registration"""
+    NAME = bpy.props.StringProperty(options={"HIDDEN"})
+    SOURCE_PATH = bpy.props.StringProperty(options={"HIDDEN"})
+    FOLDER = bpy.props.StringProperty(options={"HIDDEN"})  # Always in posix format
+    DATA = bpy.props.StringProperty(options={"HIDDEN"}, subtype="BYTE_STRING")
+    FILE_TYPE = bpy.props.StringProperty(options={"HIDDEN"})
 
-    name: bpy.props.StringProperty(options={"HIDDEN"})
-    source_path: bpy.props.StringProperty(options={"HIDDEN"})
-    folder: bpy.props.StringProperty(options={"HIDDEN"})  # Always in posix format
-    data: bpy.props.StringProperty(options={"HIDDEN"}, subtype="BYTE_STRING")
-    file_type: bpy.props.StringProperty(options={"HIDDEN"})
+    name: NAME
+    source_path: SOURCE_PATH
+    folder: FOLDER
+    data: DATA
+    file_type: FILE_TYPE
 
 
 class AlbamExportSettings(bpy.types.PropertyGroup):
     """Export option checkboxes for the Albam panel"""
-
-    export_visible_bool: bpy.props.BoolProperty(
+    EXPORT_VISIBLE_BOOL = bpy.props.BoolProperty(
         name="Enable or Disable", description="Export visible meshes only", default=False
     )
+    export_visible_bool: EXPORT_VISIBLE_BOOL
 
 
 class ALBAM_PT_CustomMaterialOptions(bpy.types.Panel):
@@ -165,16 +174,19 @@ class ALBAM_PT_ToolsPanel(bpy.types.Panel):
 class AlbamImportOperator(bpy.types.Operator):
     """Import button operator"""
 
+    DIRECTORY = bpy.props.StringProperty(subtype="DIR_PATH")
+    FILES = bpy.props.CollectionProperty(name="adf", type=bpy.types.OperatorFileListElement)
+    FILTER_GLOB = bpy.props.StringProperty(default="*.arc", options={"HIDDEN"})
+    UNPACK_DIR = bpy.props.StringProperty(options={"HIDDEN"})
+
     bl_idname = "albam_import.item"
     bl_label = "import item"
-    directory: bpy.props.StringProperty(subtype="DIR_PATH")  # fileselect_add properies here
-    files: bpy.props.CollectionProperty(
-        name="adf", type=bpy.types.OperatorFileListElement
-    )  # fileselect_add properies here
-    filter_glob: bpy.props.StringProperty(default="*.arc", options={"HIDDEN"})
-    unpack_dir: bpy.props.StringProperty(options={"HIDDEN"})
+    directory: DIRECTORY
+    files: FILES
+    filter_glob: FILTER_GLOB
+    unpack_dir: UNPACK_DIR
 
-    def invoke(self, context, event):  # pragma: no cover
+    def invoke(self, context, event):
         wm = context.window_manager
         wm.fileselect_add(self)
         return {"RUNNING_MODAL"}
@@ -292,7 +304,7 @@ class AlbamSelectInvalidMeshesOperator(bpy.types.Operator):
     def execute(self, context):
         try:
             bpy.ops.object.mode_set(mode="OBJECT")
-        except:
+        except Exception:
             pass
         selection = bpy.context.scene.objects
         scene_meshes = [obj for obj in selection if obj.type == "MESH"]
@@ -311,7 +323,7 @@ class AlbamRemoveEmptyVertexGroupsOperator(bpy.types.Operator):
     def execute(self, context):
         try:
             bpy.ops.object.mode_set(mode="OBJECT")
-        except:
+        except Exception:
             pass
         selection = bpy.context.scene.objects
         scene_meshes = [obj for obj in selection if obj.type == "MESH"]
@@ -362,3 +374,20 @@ class AlbamTransferNormalsOperator(bpy.types.Operator):
         else:
             show_message_box(message="There is no mesh in selection")
         return {"FINISHED"}
+
+
+classes_to_register = (
+    AlbamImportedItem,
+    AlbamImportedItemName,
+    AlbamExportSettings,
+    ALBAM_PT_CustomTextureOptions,
+    AlbamExportOperator,
+    ALBAM_PT_ImportExportPanel,
+    ALBAM_PT_ToolsPanel,
+    ALBAM_PT_CustomMaterialOptions,
+    ALBAM_PT_CustomMeshOptions,
+    AlbamImportOperator,
+    AlbamFixLeakedTexuresOperator,
+    AlbamSelectInvalidMeshesOperator,
+    AlbamRemoveEmptyVertexGroupsOperator,
+)

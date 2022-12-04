@@ -1,8 +1,8 @@
 from ctypes import Structure, sizeof, c_int, c_char, c_byte
 import os
 
-from ..exceptions import TextureError
-from ..lib.structure import DynamicStructure
+from albam_reloaded.exceptions import TextureError
+from albam_reloaded.lib.structure import DynamicStructure
 
 
 class DDSHeader(Structure):

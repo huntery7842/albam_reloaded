@@ -1,6 +1,4 @@
-from copy import copy
 import ctypes
-from ctypes import c_float
 import os
 
 

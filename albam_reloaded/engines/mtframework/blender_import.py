@@ -9,13 +9,13 @@ try:
 except ImportError:
     pass
 
-from ...exceptions import (
-    BuildMeshError,
-    TextureError,
-)  # my lines IDK where they originally imported
-
-from ...engines.mtframework import Arc, Mod156, Tex112, KNOWN_ARC_BLENDER_CRASH, CORRUPTED_ARCS
-from ...engines.mtframework.utils import (
+from albam_reloaded.exceptions import BuildMeshError, TextureError
+from albam_reloaded.lib.misc import chunks
+from albam_reloaded.lib.half_float import unpack_half_float
+from albam_reloaded.lib.blender import strip_triangles_to_triangles_list
+from albam_reloaded.registry import blender_registry
+from . import Arc, Mod156, Tex112, KNOWN_ARC_BLENDER_CRASH, CORRUPTED_ARCS
+from .utils import (
     get_vertices_array,
     get_indices_array,
     get_non_deform_bone_indices,
@@ -23,11 +23,7 @@ from ...engines.mtframework.utils import (
     transform_vertices_from_bbox,
     texture_code_to_blender_texture,
 )
-from ...engines.mtframework.mappers import BONE_INDEX_TO_GROUP
-from ...lib.misc import chunks
-from ...lib.half_float import unpack_half_float
-from ...lib.blender import strip_triangles_to_triangles_list
-from ...registry import blender_registry
+from .mappers import BONE_INDEX_TO_GROUP
 
 
 @blender_registry.register_function("import", identifier=b"ARC\x00")
@@ -517,9 +513,8 @@ def _create_shader_node_group():
 def _create_blender_materials_from_mod(mod, model_name, textures):
     """textures: bpy.data.textures"""
     materials = []
-    existed_textures = []
     if not bpy.data.node_groups.get("MT Framework shader"):
-        shader_node = _create_shader_node_group()
+        _create_shader_node_group()
 
     for i, material in enumerate(mod.materials_data_array):
         blender_material = bpy.data.materials.new("{}_{}".format(model_name, str(i).zfill(2)))

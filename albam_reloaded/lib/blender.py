@@ -4,7 +4,6 @@ except ImportError:
     pass
 from collections import deque, namedtuple
 import math
-import os
 
 
 BoundingBox = namedtuple(
@@ -111,7 +110,7 @@ def triangles_list_to_triangles_strip(blender_mesh):
             if face_to_add != current_face_verts and face_to_add != tuple(
                 reversed(current_face_verts)
             ):
-                # we arrived here because the current face shares and edge with the face in the strip
+                # arrived here because the current face shares and edge with the face in the strip
                 # however, if we just add the verts, we would be changing the direction of the face
                 # so we create a degenerate triangle before adding to it to the strip
                 current_strip.append(current_strip[-2])

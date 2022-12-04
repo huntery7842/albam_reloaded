@@ -68,7 +68,7 @@ def select_invalid_meshes_operator(scene_meshes):
                     for vertex in mesh.data.vertices
                     for vgroup in vertex.groups
                 }
-            except:
+            except Exception:
                 print(mesh.name)
                 invalid_vertex_groups.append(mesh)
                 bone_indices = {}

@@ -1,10 +1,10 @@
 from ctypes import c_int, c_uint, c_char, c_short, c_float, c_byte, sizeof
 import os
 
-from ...image_formats.dds import DDSHeader, DDS
-from ...lib.structure import DynamicStructure
-from ...registry import blender_registry
-from ...engines.mtframework.defaults import DEFAULT_TEXTURE
+from albam_reloaded.image_formats.dds import DDSHeader, DDS
+from albam_reloaded.lib.structure import DynamicStructure
+from albam_reloaded.registry import blender_registry
+from .defaults import DEFAULT_TEXTURE
 
 
 @blender_registry.register_bpy_prop("texture", "unk_")

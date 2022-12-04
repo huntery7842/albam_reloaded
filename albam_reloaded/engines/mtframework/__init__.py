@@ -1,6 +1,6 @@
 from .arc import Arc
 from .mod_156 import Mod156
-from ...engines.mtframework.tex import Tex112
+from .tex import Tex112
 from .mappers import FILE_ID_TO_EXTENSION, EXTENSION_TO_FILE_ID
 
 
@@ -23,7 +23,6 @@ CORRUPTED_ARCS = {
 
 # Probably due to bad indices, needs investigation
 KNOWN_ARC_BLENDER_CRASH = {
-    #'ev108_10.arc',
     "ev612_00.arc",
     "ev204_00.arc",
     "ev606_00.arc",
