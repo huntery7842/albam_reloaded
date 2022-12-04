@@ -4,7 +4,7 @@ from collections import defaultdict
 
 class BlenderRegistry:
 
-    _VALID_BPY_PROP_IDENTIFIERS = {'material', 'texture', 'mesh'}
+    _VALID_BPY_PROP_IDENTIFIERS = {"material", "texture", "mesh"}
 
     def __init__(self):
         self.import_registry = {}
@@ -13,13 +13,14 @@ class BlenderRegistry:
 
     def register_function(self, func_type, identifier):
         def decorator(f):
-            if func_type == 'import':
+            if func_type == "import":
                 self.import_registry[identifier] = f
-            elif func_type == 'export':
+            elif func_type == "export":
                 self.export_registry[identifier] = f
             else:
-                raise TypeError('func_type {} not valid.'.format(func_type))
+                raise TypeError("func_type {} not valid.".format(func_type))
             return f
+
         return decorator
 
     def register_bpy_prop(self, identifier, prefix):
@@ -33,11 +34,14 @@ class BlenderRegistry:
         settings are changed before exporting
         """
         if identifier not in self._VALID_BPY_PROP_IDENTIFIERS:
-            raise TypeError('Identifier {} is not valid: {}'
-                            .format(identifier, self._VALID_BPY_PROP_IDENTIFIERS))
+            raise TypeError(
+                "Identifier {} is not valid: {}".format(
+                    identifier, self._VALID_BPY_PROP_IDENTIFIERS
+                )
+            )
 
         def decorator(cls):
-            defaults_dict = getattr(cls, '_defaults_', {})
+            defaults_dict = getattr(cls, "_defaults_", {})
             for field in cls._fields_:
                 field_name = field[0]
                 field_type = field[1]
@@ -49,19 +53,28 @@ class BlenderRegistry:
                 value = (name_to_register, bpy_prop_cls_name, default)
                 self.bpy_props[identifier].append(value)
             return cls
+
         return decorator
 
     @staticmethod
     def _decide_bpyprop_cls(field_type):
         # TODO: add grouping in a different lib, like the 'DynamicStructure' one
         if field_type == ctypes.c_float:
-            return 'FloatProperty'
-        elif field_type in (ctypes.c_short, ctypes.c_ushort, ctypes.c_uint, ctypes.c_byte, ctypes.c_ubyte):
-            return 'IntProperty'
+            return "FloatProperty"
+        elif field_type in (
+            ctypes.c_short,
+            ctypes.c_ushort,
+            ctypes.c_uint,
+            ctypes.c_byte,
+            ctypes.c_ubyte,
+        ):
+            return "IntProperty"
         elif field_type == ctypes.c_uint16:
-            return 'BoolProperty'
+            return "BoolProperty"
         else:
-            raise TypeError('{} is not supported for registering with a bpy prop'.format(field_type))
+            raise TypeError(
+                "{} is not supported for registering with a bpy prop".format(field_type)
+            )
 
 
 blender_registry = BlenderRegistry()

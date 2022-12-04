@@ -1,4 +1,3 @@
-
 class BuildMeshError(Exception):
     pass
 

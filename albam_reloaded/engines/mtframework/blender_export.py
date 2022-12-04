@@ -24,14 +24,14 @@ from ...engines.mtframework.mod_156 import (
     BonePalette,
     CLASSES_TO_VERTEX_FORMATS,
     VERTEX_FORMATS_TO_CLASSES,
-    )
-from ...engines.mtframework import Arc , Mod156, Tex112
+)
+from ...engines.mtframework import Arc, Mod156, Tex112
 from ...engines.mtframework.utils import (
     vertices_export_locations,
     blender_texture_to_texture_code,
     get_texture_dirs,
     get_default_texture_dir,
-    )
+)
 from ...lib.half_float import pack_half_float
 from ...lib.structure import get_offset
 from ...lib.geometry import z_up_to_y_up
@@ -53,40 +53,57 @@ from ...lib.blender import (
 # This way one doesn't need to care about them
 # We might give the ability to create LOD as an advanced feature.
 EXPORT_LEVEL_OF_DETAIL = 255
-ExportedMeshes = namedtuple('ExportedMeshes', ('meshes_array', 'vertex_buffer', 'index_buffer', 'weight_bounds'))
-ExportedMaterials = namedtuple('ExportedMaterials', ('textures_array', 'materials_data_array',
-                                                     'materials_mapping', 'blender_textures',
-                                                     'texture_dirs'))
-ExportedMod = namedtuple('ExportedMod', ('mod', 'exported_materials'))
+ExportedMeshes = namedtuple(
+    "ExportedMeshes", ("meshes_array", "vertex_buffer", "index_buffer", "weight_bounds")
+)
+ExportedMaterials = namedtuple(
+    "ExportedMaterials",
+    (
+        "textures_array",
+        "materials_data_array",
+        "materials_mapping",
+        "blender_textures",
+        "texture_dirs",
+    ),
+)
+ExportedMod = namedtuple("ExportedMod", ("mod", "exported_materials"))
 
 
-@blender_registry.register_function('export', b'ARC\x00')
+@blender_registry.register_function("export", b"ARC\x00")
 def export_arc(blender_object, file_path):
-    '''
-        blender_object : bpy.data.objects['uPl02JillCos1.arc']
-        file_path : full path to .ars
-    '''
-    saved_arc = Arc(file_path=BytesIO(blender_object.albam_imported_item.data)) # <albam_reloaded.engines.mtframework.arc.GenArc object
+    """
+    blender_object : bpy.data.objects['uPl02JillCos1.arc']
+    file_path : full path to .ars
+    """
+    saved_arc = Arc(
+        file_path=BytesIO(blender_object.albam_imported_item.data)
+    )  # <albam_reloaded.engines.mtframework.arc.GenArc object
 
     mods = {}
     texture_dirs = {}
     textures_to_export = []
 
     for child in blender_object.children:
-        exportable = hasattr(child, 'albam_imported_item')
+        exportable = hasattr(child, "albam_imported_item")
         if not exportable:
             continue
 
-        exported_mod = export_mod156(child) #run export_mod156 function
-        mods[child.name] = exported_mod # {'Pl0200.mod': <ExportedMod, len() = 2>}
-        texture_dirs.update(exported_mod.exported_materials.texture_dirs) # path inside arc 'pawn\\pl\\pl02\\model'
+        exported_mod = export_mod156(child)  # run export_mod156 function
+        mods[child.name] = exported_mod  # {'Pl0200.mod': <ExportedMod, len() = 2>}
+        texture_dirs.update(
+            exported_mod.exported_materials.texture_dirs
+        )  # path inside arc 'pawn\\pl\\pl02\\model'
         textures_to_export.extend(exported_mod.exported_materials.blender_textures)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         saved_arc.unpack(tmpdir)
 
-        mod_files = [os.path.join(root, f) for root, _, files in os.walk(tmpdir)
-                     for f in files if f.endswith('.mod')]
+        mod_files = [
+            os.path.join(root, f)
+            for root, _, files in os.walk(tmpdir)
+            for f in files
+            if f.endswith(".mod")
+        ]
 
         # overwriting the original mod files with the exported ones
         for modf in mod_files:
@@ -95,36 +112,38 @@ def export_arc(blender_object, file_path):
                 # TODO: mods with the same name in different folders
                 exported_mod = mods[filename]
             except KeyError:
-                raise ExportError("Can't export to arc, a mod file is missing: {}. "
-                                  "Was it deleted before exporting?. "
-                                  "mods.items(): {}".format(filename, mods.items()))
+                raise ExportError(
+                    "Can't export to arc, a mod file is missing: {}. "
+                    "Was it deleted before exporting?. "
+                    "mods.items(): {}".format(filename, mods.items())
+                )
 
-            with open(modf, 'wb') as w:
+            with open(modf, "wb") as w:
                 w.write(exported_mod.mod)
 
         for blender_texture in textures_to_export:
             texture_name = blender_texture.name
-            #texture_name = blender_texture.image.name
+            # texture_name = blender_texture.image.name
             resolved_path = ntpath_to_os_path(texture_dirs[texture_name])
             tex_file_path = bpy.path.abspath(blender_texture.image.filepath)
             tex_filename_no_ext = os.path.splitext(os.path.basename(tex_file_path))[0]
-            destination_path = os.path.join(tmpdir, resolved_path, tex_filename_no_ext + '.tex')
+            destination_path = os.path.join(tmpdir, resolved_path, tex_filename_no_ext + ".tex")
             tex = Tex112.from_dds(file_path=bpy.path.abspath(blender_texture.image.filepath))
             # metadata saved
             # TODO: use an util function
             for field in tex._fields_:
                 attr_name = field[0]
-                if not attr_name.startswith('unk_'):
+                if not attr_name.startswith("unk_"):
                     continue
                 setattr(tex, attr_name, getattr(blender_texture, attr_name))
 
-            with open(destination_path, 'wb') as w:
+            with open(destination_path, "wb") as w:
                 w.write(tex)
 
         # Once the textures and the mods have been replaced, repack.
         new_arc = Arc.from_dir(tmpdir)
 
-    with open(file_path, 'wb') as w:
+    with open(file_path, "wb") as w:
         w.write(new_arc)
 
 
@@ -132,17 +151,16 @@ def export_mod156(parent_blender_object):
     saved_mod = Mod156(file_path=BytesIO(parent_blender_object.albam_imported_item.data))
 
     first_children = [child for child in parent_blender_object.children]
-    blender_meshes = [c for c in first_children if c.type == 'MESH']
-    if (bpy.context.scene.albam_export_settings.export_visible_bool == True):
+    blender_meshes = [c for c in first_children if c.type == "MESH"]
+    if bpy.context.scene.albam_export_settings.export_visible_bool == True:
         visible_meshes = [mesh for mesh in blender_meshes if mesh.visible_get()]
         blender_meshes = visible_meshes
-
 
     # only going one level deeper
     if not blender_meshes:
         children_objects = list(chain.from_iterable(child.children for child in first_children))
-        blender_meshes = [c for c in children_objects if c.type == 'MESH']
-        if (bpy.context.scene.albam_export_settings.export_visible_bool == True):
+        blender_meshes = [c for c in children_objects if c.type == "MESH"]
+        if bpy.context.scene.albam_export_settings.export_visible_bool == True:
             visible_meshes = [mesh for mesh in blender_meshes if mesh.visible_get()]
             blender_meshes = visible_meshes
 
@@ -168,74 +186,79 @@ def export_mod156(parent_blender_object):
 
     bl_bbox = get_model_bounding_box(blender_meshes)
     bbox = BoundingBox(
-            bl_bbox.min_x * 100, bl_bbox.min_z * 100, -bl_bbox.max_y * 100,
-            bl_bbox.max_x * 100, bl_bbox.max_z * 100, -bl_bbox.min_y * 100
+        bl_bbox.min_x * 100,
+        bl_bbox.min_z * 100,
+        -bl_bbox.max_y * 100,
+        bl_bbox.max_x * 100,
+        bl_bbox.max_z * 100,
+        -bl_bbox.min_y * 100,
     )
     bl_bsphere = get_model_bounding_sphere(blender_meshes)
     bsphere = bl_bsphere[0] * 100, bl_bsphere[2] * 100, -bl_bsphere[1] * 100, bl_bsphere[3] * 100
     exported_materials = _export_textures_and_materials(blender_meshes, saved_mod)
     exported_meshes = _export_meshes(blender_meshes, bone_palettes, exported_materials, bbox)
 
-    mod = Mod156(id_magic=b'MOD',
-                 version=156,
-                 version_rev=1,
-                 bone_count=saved_mod.bone_count,
-                 mesh_count=len(blender_meshes),
-                 material_count=len(exported_materials.materials_data_array),
-                 vertex_count=get_vertex_count_from_blender_objects(blender_meshes),
-                 face_count=(ctypes.sizeof(exported_meshes.index_buffer) // 2) + 1,
-                 edge_count=0,  # TODO: add edge_count
-                 vertex_buffer_size=ctypes.sizeof(exported_meshes.vertex_buffer),
-                 vertex_buffer_2_size=len(saved_mod.vertex_buffer_2),
-                 texture_count=len(exported_materials.textures_array),
-                 group_count=saved_mod.group_count,
-                 group_data_array=saved_mod.group_data_array,
-                 bone_palette_count=len(bone_palette_array),
-                 bones_array_offset=bones_array_offset,
-                 sphere_x=bsphere[0],
-                 sphere_y=bsphere[1],
-                 sphere_z=bsphere[2],
-                 sphere_w=bsphere[3],
-                 box_min_x=bbox.min_x,
-                 box_min_y=bbox.min_y,
-                 box_min_z=bbox.min_z,
-                 box_min_w=0,
-                 box_max_x=bbox.max_x,
-                 box_max_y=bbox.max_y,
-                 box_max_z=bbox.max_z,
-                 box_max_w=0,
-                 unk_01=saved_mod.unk_01,
-                 unk_02=saved_mod.unk_02,
-                 unk_03=saved_mod.unk_03,
-                 unk_04=saved_mod.unk_04,
-                 unk_05=saved_mod.unk_05,
-                 unk_06=saved_mod.unk_06,
-                 unk_07=saved_mod.unk_07,
-                 unk_08=saved_mod.unk_08,
-                 unk_09=saved_mod.unk_09,
-                 unk_10=saved_mod.unk_10,
-                 unk_11=saved_mod.unk_11,
-                 unk_12=saved_mod.unk_12,
-                 bones_array=saved_mod.bones_array,
-                 bones_unk_matrix_array=saved_mod.bones_unk_matrix_array,
-                 bones_world_transform_matrix_array=saved_mod.bones_world_transform_matrix_array,
-                 bones_animation_mapping=saved_mod.bones_animation_mapping,
-                 bone_palette_array=bone_palette_array,
-                 textures_array=exported_materials.textures_array,
-                 materials_data_array=exported_materials.materials_data_array,
-                 meshes_array=exported_meshes.meshes_array,
-                 num_weight_bounds=len(exported_meshes.weight_bounds),
-                 weight_bounds=exported_meshes.weight_bounds,
-                 vertex_buffer=exported_meshes.vertex_buffer,
-                 vertex_buffer_2=saved_mod.vertex_buffer_2,
-                 index_buffer=exported_meshes.index_buffer
-                 )
-    mod.group_offset = get_offset(mod, 'group_data_array')
-    mod.textures_array_offset = get_offset(mod, 'textures_array')
-    mod.meshes_array_offset = get_offset(mod, 'meshes_array')
-    mod.vertex_buffer_offset = get_offset(mod, 'vertex_buffer')
-    mod.vertex_buffer_2_offset = get_offset(mod, 'vertex_buffer_2')
-    mod.index_buffer_offset = get_offset(mod, 'index_buffer')
+    mod = Mod156(
+        id_magic=b"MOD",
+        version=156,
+        version_rev=1,
+        bone_count=saved_mod.bone_count,
+        mesh_count=len(blender_meshes),
+        material_count=len(exported_materials.materials_data_array),
+        vertex_count=get_vertex_count_from_blender_objects(blender_meshes),
+        face_count=(ctypes.sizeof(exported_meshes.index_buffer) // 2) + 1,
+        edge_count=0,  # TODO: add edge_count
+        vertex_buffer_size=ctypes.sizeof(exported_meshes.vertex_buffer),
+        vertex_buffer_2_size=len(saved_mod.vertex_buffer_2),
+        texture_count=len(exported_materials.textures_array),
+        group_count=saved_mod.group_count,
+        group_data_array=saved_mod.group_data_array,
+        bone_palette_count=len(bone_palette_array),
+        bones_array_offset=bones_array_offset,
+        sphere_x=bsphere[0],
+        sphere_y=bsphere[1],
+        sphere_z=bsphere[2],
+        sphere_w=bsphere[3],
+        box_min_x=bbox.min_x,
+        box_min_y=bbox.min_y,
+        box_min_z=bbox.min_z,
+        box_min_w=0,
+        box_max_x=bbox.max_x,
+        box_max_y=bbox.max_y,
+        box_max_z=bbox.max_z,
+        box_max_w=0,
+        unk_01=saved_mod.unk_01,
+        unk_02=saved_mod.unk_02,
+        unk_03=saved_mod.unk_03,
+        unk_04=saved_mod.unk_04,
+        unk_05=saved_mod.unk_05,
+        unk_06=saved_mod.unk_06,
+        unk_07=saved_mod.unk_07,
+        unk_08=saved_mod.unk_08,
+        unk_09=saved_mod.unk_09,
+        unk_10=saved_mod.unk_10,
+        unk_11=saved_mod.unk_11,
+        unk_12=saved_mod.unk_12,
+        bones_array=saved_mod.bones_array,
+        bones_unk_matrix_array=saved_mod.bones_unk_matrix_array,
+        bones_world_transform_matrix_array=saved_mod.bones_world_transform_matrix_array,
+        bones_animation_mapping=saved_mod.bones_animation_mapping,
+        bone_palette_array=bone_palette_array,
+        textures_array=exported_materials.textures_array,
+        materials_data_array=exported_materials.materials_data_array,
+        meshes_array=exported_meshes.meshes_array,
+        num_weight_bounds=len(exported_meshes.weight_bounds),
+        weight_bounds=exported_meshes.weight_bounds,
+        vertex_buffer=exported_meshes.vertex_buffer,
+        vertex_buffer_2=saved_mod.vertex_buffer_2,
+        index_buffer=exported_meshes.index_buffer,
+    )
+    mod.group_offset = get_offset(mod, "group_data_array")
+    mod.textures_array_offset = get_offset(mod, "textures_array")
+    mod.meshes_array_offset = get_offset(mod, "meshes_array")
+    mod.vertex_buffer_offset = get_offset(mod, "vertex_buffer")
+    mod.vertex_buffer_2_offset = get_offset(mod, "vertex_buffer_2")
+    mod.index_buffer_offset = get_offset(mod, "index_buffer")
 
     return ExportedMod(mod, exported_materials)
 
@@ -297,7 +320,7 @@ def _get_tangents_per_vertex(blender_mesh):
     try:
         uv_name = blender_mesh.uv_layers[0].name
     except IndexError:
-        uv_name = ''
+        uv_name = ""
     blender_mesh.calc_tangents(uvmap=uv_name)
     for loop in blender_mesh.loops:
         tangents.setdefault(loop.vertex_index, loop.tangent)
@@ -325,7 +348,7 @@ def _export_vertices(blender_mesh_object, mesh_index, bone_palette, model_boundi
         uvs_per_vertex[vertex_index] = (uv_x, uv_y)
 
     vertices_array = (VF * vertex_count)()
-    has_bones = hasattr(VF, 'bone_indices')
+    has_bones = hasattr(VF, "bone_indices")
 
     for vertex_index, vertex in enumerate(blender_mesh.vertices):
         vertex_struct = vertices_array[vertex_index]
@@ -357,7 +380,7 @@ def _export_vertices(blender_mesh_object, mesh_index, bone_palette, model_boundi
             vertex_struct.tangent_w = 255
         except KeyError:
             # should not happen. TODO: investigate cases where it did happen
-            print('Missing normal in vertex {}, mesh {}'.format(vertex_index, mesh_index))
+            print("Missing normal in vertex {}, mesh {}".format(vertex_index, mesh_index))
         vertex_struct.uv_x = uvs_per_vertex.get(vertex_index, (0, 0))[0] if uvs_per_vertex else 0
         vertex_struct.uv_y = uvs_per_vertex.get(vertex_index, (0, 0))[1] if uvs_per_vertex else 0
     return vertices_array
@@ -367,29 +390,38 @@ def _create_bone_palettes(blender_mesh_objects):
     bone_palette_dicts = []
     MAX_BONE_PALETTE_SIZE = 32
 
-    bone_palette = {'mesh_indices': set(), 'bone_indices': set()}
+    bone_palette = {"mesh_indices": set(), "bone_indices": set()}
     for i, mesh in enumerate(blender_mesh_objects):
         armature = mesh.parent
-        vertex_group_mapping = {vg.index: armature.pose.bones.find(vg.name) for vg in mesh.vertex_groups}
+        vertex_group_mapping = {
+            vg.index: armature.pose.bones.find(vg.name) for vg in mesh.vertex_groups
+        }
         vertex_group_mapping = {k: v for k, v in vertex_group_mapping.items() if v != -1}
-        bone_indices = {vertex_group_mapping[vgroup.group] for vertex in mesh.data.vertices for vgroup in vertex.groups}
+        bone_indices = {
+            vertex_group_mapping[vgroup.group]
+            for vertex in mesh.data.vertices
+            for vgroup in vertex.groups
+        }
 
-        msg = "Mesh {} is influenced by more than 32 bones, which is not supported".format(mesh.name)
+        msg = "Mesh {} is influenced by more than 32 bones, which is not supported".format(
+            mesh.name
+        )
         assert len(bone_indices) <= MAX_BONE_PALETTE_SIZE, msg
 
-        current = bone_palette['bone_indices']
+        current = bone_palette["bone_indices"]
         potential = current.union(bone_indices)
         if len(potential) > MAX_BONE_PALETTE_SIZE:
             bone_palette_dicts.append(bone_palette)
-            bone_palette = {'mesh_indices': {i}, 'bone_indices': set(bone_indices)}
+            bone_palette = {"mesh_indices": {i}, "bone_indices": set(bone_indices)}
         else:
-            bone_palette['mesh_indices'].add(i)
-            bone_palette['bone_indices'].update(bone_indices)
+            bone_palette["mesh_indices"].add(i)
+            bone_palette["bone_indices"].update(bone_indices)
 
     bone_palette_dicts.append(bone_palette)
 
-    final = OrderedDict([(frozenset(bp['mesh_indices']), sorted(bp['bone_indices']))
-                        for bp in bone_palette_dicts])
+    final = OrderedDict(
+        [(frozenset(bp["mesh_indices"]), sorted(bp["bone_indices"])) for bp in bone_palette_dicts]
+    )
 
     return final
 
@@ -397,10 +429,9 @@ def _create_bone_palettes(blender_mesh_objects):
 def _get_shadow_method(blender_material):
     index = 0
     if blender_material:
-        if not blender_material.shadow_method == 'NONE':
+        if not blender_material.shadow_method == "NONE":
             index = 1
     return index
-
 
 
 def calculate_vertex_group_weight_bound(blender_mesh, armature, vertex_group):
@@ -446,22 +477,34 @@ def calculate_vertex_group_weight_bound(blender_mesh, armature, vertex_group):
     # - https://github.com/AsteriskAmpersand/Mod3-MHW-Importer/tree/master/boundingbox
     # thanks to AsteriskAmpersand for math help
     oabb_export = [
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        bsphere_export[0], bsphere_export[1], bsphere_export[2], 1
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        bsphere_export[0],
+        bsphere_export[1],
+        bsphere_export[2],
+        1,
     ]
 
     oabb_dimension = (length_x * 100, length_z * 100, length_y * 100, 0.0)
 
     weight_bound = WeightBound(
-            bone_id=bone_index,
-            unk_01=(ctypes.c_float * 3)(0.0, 0.0, 0.0),
-            bsphere=(ctypes.c_float * 4)(*bsphere_export),
-            bbox_min=(ctypes.c_float * 4)(*bbox_min_export),
-            bbox_max=(ctypes.c_float * 4)(*bbox_max_export),
-            oabb_matrix=(ctypes.c_float * 16)(*oabb_export),
-            oabb_dimension=(ctypes.c_float * 4)(*oabb_dimension),
+        bone_id=bone_index,
+        unk_01=(ctypes.c_float * 3)(0.0, 0.0, 0.0),
+        bsphere=(ctypes.c_float * 4)(*bsphere_export),
+        bbox_min=(ctypes.c_float * 4)(*bbox_min_export),
+        bbox_max=(ctypes.c_float * 4)(*bbox_max_export),
+        oabb_matrix=(ctypes.c_float * 16)(*oabb_export),
+        oabb_dimension=(ctypes.c_float * 4)(*oabb_dimension),
     )
 
     return weight_bound
@@ -484,7 +527,6 @@ def _export_meshes(blender_meshes, bone_palettes, exported_materials, model_boun
     face_position = 0
     weight_bounds_list = []
 
-
     for mesh_index, blender_mesh_ob in enumerate(blender_meshes):
         bone_palette_index = 0
         bone_palette = []
@@ -495,7 +537,9 @@ def _export_meshes(blender_meshes, bone_palettes, exported_materials, model_boun
                 break
 
         blender_mesh = blender_mesh_ob.data
-        vertices_array = _export_vertices(blender_mesh_ob, mesh_index, bone_palette, model_bounding_box_export)
+        vertices_array = _export_vertices(
+            blender_mesh_ob, mesh_index, bone_palette, model_bounding_box_export
+        )
         vertex_buffer.extend(vertices_array)
         is_skeletal = bool(blender_mesh_ob.parent.type == "ARMATURE")
 
@@ -503,14 +547,16 @@ def _export_meshes(blender_meshes, bone_palettes, exported_materials, model_boun
         triangle_strips_python = triangles_list_to_triangles_strip(blender_mesh)
         # mod156 use global indices for verts, in case one only mesh is needed, probably
         triangle_strips_python = [e + vertex_position for e in triangle_strips_python]
-        triangle_strips_ctypes = (ctypes.c_ushort * len(triangle_strips_python))(*triangle_strips_python)
+        triangle_strips_ctypes = (ctypes.c_ushort * len(triangle_strips_python))(
+            *triangle_strips_python
+        )
         index_buffer.extend(triangle_strips_ctypes)
 
         vertex_count = len(blender_mesh.vertices)
         index_count = len(triangle_strips_python)
 
         m156 = meshes_156[mesh_index]
-        #for field in m156._fields_:
+        # for field in m156._fields_:
         #    attr_name = field[0]
         #    if not attr_name.startswith('unk_'):
         #        continue
@@ -521,16 +567,16 @@ def _export_meshes(blender_meshes, bone_palettes, exported_materials, model_boun
             m156.material_index = materials_mapping[blender_material.name]
         except IndexError:
             # TODO: insert an empty generic material in this case
-            raise ExportError('Mesh {} has no materials'.format(blender_mesh.name))
+            raise ExportError("Mesh {} has no materials".format(blender_mesh.name))
         m156.unk_01 = blender_mesh.unk_01
         m156.unk_02 = blender_mesh.unk_02
-        m156.unk_03 = 0 # makes meshes semi transparent with an orginal value
+        m156.unk_03 = 0  # makes meshes semi transparent with an orginal value
         m156.unk_flag_01 = blender_mesh.unk_flag_01
         m156.unk_flag_02 = blender_mesh.unk_flag_02
         m156.unk_flag_03 = blender_mesh.unk_flag_03
         m156.unk_flag_04 = blender_mesh.unk_flag_04
         m156.unk_flag_05 = blender_mesh.unk_flag_05
-        m156.unk_flag_06 = blender_mesh.unk_flag_06 #high brightness
+        m156.unk_flag_06 = blender_mesh.unk_flag_06  # high brightness
         m156.unk_flag_07 = blender_mesh.unk_flag_07
         m156.unk_05 = blender_mesh.unk_05
         m156.unk_06 = blender_mesh.unk_06
@@ -554,13 +600,15 @@ def _export_meshes(blender_meshes, bone_palettes, exported_materials, model_boun
         m156.vertex_index_start_2 = vertex_position
         m156.vertex_group_count = len(blender_mesh_ob.vertex_groups) if is_skeletal else 1
         m156.bone_palette_index = bone_palette_index
-        #m156.use_cast_shadows = int(blender_material.use_cast_shadows)
+        # m156.use_cast_shadows = int(blender_material.use_cast_shadows)
         m156.use_cast_shadows = int(_get_shadow_method(blender_material))
         vertex_position += vertex_count
         face_position += index_count
 
         if is_skeletal:
-            weight_bounds = _calculate_weight_bounds_skeletal_mesh(blender_mesh_ob, blender_mesh_ob.parent)
+            weight_bounds = _calculate_weight_bounds_skeletal_mesh(
+                blender_mesh_ob, blender_mesh_ob.parent
+            )
             weight_bounds_list.extend(weight_bounds)
         else:
             weight_bound = _calculate_bound_static_mesh(blender_mesh_ob)
@@ -605,22 +653,34 @@ def _calculate_bound_static_mesh(blender_mesh_ob):
     # - https://github.com/AsteriskAmpersand/Mod3-MHW-Importer/tree/master/boundingbox
     # thanks to AsteriskAmpersand for math help
     oabb_export = [
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        bsphere_export[0], bsphere_export[1], bsphere_export[2], 1
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        bsphere_export[0],
+        bsphere_export[1],
+        bsphere_export[2],
+        1,
     ]
 
     oabb_dimension = (length_x * 100, length_z * 100, length_y * 100, 0.0)
 
     weight_bound = WeightBound(
-            bone_id=255,
-            unk_01=(ctypes.c_float * 3)(-431602080, -431602080, -431602080),
-            bsphere=(ctypes.c_float * 4)(*bsphere_export),
-            bbox_min=(ctypes.c_float * 4)(*bbox_min_export),
-            bbox_max=(ctypes.c_float * 4)(*bbox_max_export),
-            oabb_matrix=(ctypes.c_float * 16)(*oabb_export),
-            oabb_dimension=(ctypes.c_float * 4)(*oabb_dimension),
+        bone_id=255,
+        unk_01=(ctypes.c_float * 3)(-431602080, -431602080, -431602080),
+        bsphere=(ctypes.c_float * 4)(*bsphere_export),
+        bbox_min=(ctypes.c_float * 4)(*bbox_min_export),
+        bbox_max=(ctypes.c_float * 4)(*bbox_max_export),
+        oabb_matrix=(ctypes.c_float * 16)(*oabb_export),
+        oabb_dimension=(ctypes.c_float * 4)(*oabb_dimension),
     )
 
     return weight_bound
@@ -633,12 +693,15 @@ def _calculate_weight_bounds_skeletal_mesh(blender_mesh_ob, armature):
         unsorted_weight_bounds.append(weight_bound)
     return sorted(unsorted_weight_bounds, key=lambda x: x.bone_id)
 
+
 def _export_textures_and_materials(blender_objects, saved_mod):
-    '''blender_objects : bpy.data.objects['Pl0200.mod_0000_LOD_1']
-       saved_mod : <albam_reloaded.engines.mtframework.mod_156.GenMod156 object>  
-    '''
-    textures = get_textures_from_blender_objects(blender_objects) # get a set of ShaderNodeTexImage
-    blender_materials = get_materials_from_blender_objects(blender_objects) # get a set with blender_objects.data.materials
+    """blender_objects : bpy.data.objects['Pl0200.mod_0000_LOD_1']
+    saved_mod : <albam_reloaded.engines.mtframework.mod_156.GenMod156 object>
+    """
+    textures = get_textures_from_blender_objects(blender_objects)  # get a set of ShaderNodeTexImage
+    blender_materials = get_materials_from_blender_objects(
+        blender_objects
+    )  # get a set with blender_objects.data.materials
 
     textures_array = ((ctypes.c_char * 64) * len(textures))()
     materials_data_array = (MaterialData * len(blender_materials))()
@@ -647,7 +710,7 @@ def _export_textures_and_materials(blender_objects, saved_mod):
     default_texture_dir = get_default_texture_dir(saved_mod)
 
     for i, texture in enumerate(textures):
-        #texture_dir = texture_dirs.get(texture.name)
+        # texture_dir = texture_dirs.get(texture.name)
         texture_dir = texture_dirs.get(texture.image.name)
         if not texture_dir:
             texture_dir = default_texture_dir
@@ -656,43 +719,54 @@ def _export_textures_and_materials(blender_objects, saved_mod):
         file_name = os.path.basename(bpy.path.abspath(texture.image.filepath))
         file_path = ntpath.join(texture_dir, file_name)
         try:
-            file_path = file_path.encode('ascii')
+            file_path = file_path.encode("ascii")
         except UnicodeEncodeError:
-            raise ExportError('Texture path {} is not in ascii'.format(file_path))
+            raise ExportError("Texture path {} is not in ascii".format(file_path))
         if len(file_path) > 64:
             # TODO: what if relative path are used?
-            raise ExportError('File path to texture {} is longer than 64 characters'
-                              .format(file_path))
+            raise ExportError(
+                "File path to texture {} is longer than 64 characters".format(file_path)
+            )
 
         file_path, _ = ntpath.splitext(file_path)
         textures_array[i] = (ctypes.c_char * 64)(*file_path)
 
     for mat_index, mat in enumerate(blender_materials):
-        material_data = MaterialData() #get sructure with game data material fields
+        material_data = MaterialData()  # get sructure with game data material fields
         # Setting uknown data
         # TODO: do this with a util function
         for field in material_data._fields_:
             attr_name = field[0]
-            if not attr_name.startswith('unk_'):
+            if not attr_name.startswith("unk_"):
                 continue
             setattr(material_data, attr_name, getattr(mat, attr_name))
 
-        #shader_node = mat.node_tree.nodes.get("MTFrameworkGroup")
-        #socket_name = shader_node.inputs[0].name
-        #is_linked = shader_node.inputs['Diffuse BM'].is_linked
-        #node_connected = shader_node.inputs['Diffuse BM'].node
+        # shader_node = mat.node_tree.nodes.get("MTFrameworkGroup")
+        # socket_name = shader_node.inputs[0].name
+        # is_linked = shader_node.inputs['Diffuse BM'].is_linked
+        # node_connected = shader_node.inputs['Diffuse BM'].node
 
-        mat_tex = get_textures_from_the_material(mat) # get list with all ImageTexture nodes of the material
-        
+        mat_tex = get_textures_from_the_material(
+            mat
+        )  # get list with all ImageTexture nodes of the material
+
         for texture_node in mat_tex:
             if not texture_node or not texture_node.image:
                 continue
-            texture = texture_node.image.name    
-            texture_data = [td for td in textures if td.image == texture_node.image] # get a texture data linked to the imageTexture node
+            texture = texture_node.image.name
+            texture_data = [
+                td for td in textures if td.image == texture_node.image
+            ]  # get a texture data linked to the imageTexture node
             try:
-                texture_index = textures.index(texture_data[0]) + 1 # get the texture data index,  texture_indices expects index-1 based
+                texture_index = (
+                    textures.index(texture_data[0]) + 1
+                )  # get the texture data index,  texture_indices expects index-1 based
             except:
-                raise ExportError("No texture data container linked with {} texture was found. Please create it before the export ".format(texture))
+                raise ExportError(
+                    "No texture data container linked with {} texture was found. Please create it before the export ".format(
+                        texture
+                    )
+                )
 
             texture_code = blender_texture_to_texture_code(texture_node)
             if texture_code is None:
@@ -701,5 +775,6 @@ def _export_textures_and_materials(blender_objects, saved_mod):
         materials_data_array[mat_index] = material_data
         materials_mapping[mat.name] = mat_index
 
-    return ExportedMaterials(textures_array, materials_data_array, materials_mapping, textures,
-                             texture_dirs)
+    return ExportedMaterials(
+        textures_array, materials_data_array, materials_mapping, textures, texture_dirs
+    )

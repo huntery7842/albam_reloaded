@@ -7,29 +7,30 @@ from ..lib.structure import DynamicStructure
 
 class DDSHeader(Structure):
 
-    _fields_ = (('id_magic', c_char * 4),
-                ('dwSize', c_int),
-                ('dwFlags', c_int),
-                ('dwHeight', c_int),
-                ('dwWidth', c_int),
-                ('dwPitchOrLinearSize', c_int),
-                ('dwDepth', c_int),
-                ('dwMipMapCount', c_int),
-                ('dwReserved1', c_int * 11),
-                ('pixelfmt_dwSize', c_int),
-                ('pixelfmt_dwFlags', c_byte * 4),
-                ('pixelfmt_dwFourCC', c_char * 4),
-                ('pixelfmt_dwRGBBitCount', c_int),
-                ('pixelfmt_dwRBitMask', c_int),
-                ('pixelfmt_dwGBitMask', c_int),
-                ('pixelfmt_dwBBitMask', c_int),
-                ('pixelfmt_dwABitMask', c_int),
-                ('dwCaps', c_int),
-                ('dwCaps2', c_int),
-                ('dwCaps3', c_int),
-                ('dwCaps4', c_int),
-                ('dwReserved2', c_int),
-                )
+    _fields_ = (
+        ("id_magic", c_char * 4),
+        ("dwSize", c_int),
+        ("dwFlags", c_int),
+        ("dwHeight", c_int),
+        ("dwWidth", c_int),
+        ("dwPitchOrLinearSize", c_int),
+        ("dwDepth", c_int),
+        ("dwMipMapCount", c_int),
+        ("dwReserved1", c_int * 11),
+        ("pixelfmt_dwSize", c_int),
+        ("pixelfmt_dwFlags", c_byte * 4),
+        ("pixelfmt_dwFourCC", c_char * 4),
+        ("pixelfmt_dwRGBBitCount", c_int),
+        ("pixelfmt_dwRBitMask", c_int),
+        ("pixelfmt_dwGBitMask", c_int),
+        ("pixelfmt_dwBBitMask", c_int),
+        ("pixelfmt_dwABitMask", c_int),
+        ("dwCaps", c_int),
+        ("dwCaps2", c_int),
+        ("dwCaps3", c_int),
+        ("dwCaps4", c_int),
+        ("dwReserved2", c_int),
+    )
 
 
 class DDS(DynamicStructure):
@@ -60,13 +61,19 @@ class DDS(DynamicStructure):
 
     REQUIRED_FLAGS = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT
 
-    _fields_ = (('header', DDSHeader),
-                ('data', lambda s, f: c_byte * (os.path.getsize(f) - sizeof(s.header)) if f else c_byte * len(s.data)),
-                )
+    _fields_ = (
+        ("header", DDSHeader),
+        (
+            "data",
+            lambda s, f: c_byte * (os.path.getsize(f) - sizeof(s.header))
+            if f
+            else c_byte * len(s.data),
+        ),
+    )
 
     # TODO: set this automatically on __init__
     def set_constants(self):
-        self.header.id_magic = b'DDS '
+        self.header.id_magic = b"DDS "
         self.header.dwSize = 124
         self.header.dwFlags = self.REQUIRED_FLAGS
 
@@ -77,9 +84,9 @@ class DDS(DynamicStructure):
         self.header.dwCaps = self.DDSCAPS_TEXTURE
 
     def set_variables(self):
-        self.header.dwPitchOrLinearSize = self.calculate_linear_size(self.header.dwWidth,
-                                                                     self.header.dwHeight,
-                                                                     self.header.pixelfmt_dwFourCC)
+        self.header.dwPitchOrLinearSize = self.calculate_linear_size(
+            self.header.dwWidth, self.header.dwHeight, self.header.pixelfmt_dwFourCC
+        )
         if self.header.dwMipMapCount:
             self.header.dwFlags |= self.DDSD_MIPMAPCOUNT
             self.header.dwCaps |= self.DDSCAPS_MIPMAP
@@ -91,17 +98,16 @@ class DDS(DynamicStructure):
         h = self.header.dwWidth
         w = self.header.dwHeight
         fmt = self.header.pixelfmt_dwFourCC
-        return [self.calculate_mipmap_size(w, h, i, fmt) for i in
-                range(self.header.dwMipMapCount)]
+        return [self.calculate_mipmap_size(w, h, i, fmt) for i in range(self.header.dwMipMapCount)]
 
     @staticmethod
     def get_block_size(fmt):
-        if fmt in (b'DXT1', b'BC1', b'BC4'):
+        if fmt in (b"DXT1", b"BC1", b"BC4"):
             return 8
-        elif fmt in (b'DXT3', b'DXT5'):
+        elif fmt in (b"DXT3", b"DXT5"):
             return 16
         else:
-            raise TextureError('Unrecognized format in dds: {}'.format(fmt))
+            raise TextureError("Unrecognized format in dds: {}".format(fmt))
 
     @classmethod
     def calculate_linear_size(cls, width, height, fmt):
@@ -121,11 +127,11 @@ class DDS(DynamicStructure):
             w >>= 1
         if h > 1:
             h >>= 1
-        if fmt == 'DDS_COMPRESS_NONE':
+        if fmt == "DDS_COMPRESS_NONE":
             size += (w * h) * 16  # FIXME: get real bpp
         else:
             size += ((w + 3) // 4) * ((h + 3) // 4)
-            if fmt == b'DXT1' or fmt == b'DXT4':
+            if fmt == b"DXT1" or fmt == b"DXT4":
                 size *= 8
             else:
                 size *= 16

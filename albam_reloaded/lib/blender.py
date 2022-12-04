@@ -7,14 +7,21 @@ import math
 import os
 
 
-BoundingBox = namedtuple('bounding_box', (
-    'min_x', 'min_y', 'min_z',
-    'max_x', 'max_y', 'max_z',
-))
+BoundingBox = namedtuple(
+    "bounding_box",
+    (
+        "min_x",
+        "min_y",
+        "min_z",
+        "max_x",
+        "max_y",
+        "max_z",
+    ),
+)
 
 
 def get_model_bounding_box(blender_objects):
-    meshes = (ob.data for ob in blender_objects if ob.type == 'MESH')
+    meshes = (ob.data for ob in blender_objects if ob.type == "MESH")
     min_x = 99999999
     min_y = 99999999
     min_z = 99999999
@@ -22,7 +29,6 @@ def get_model_bounding_box(blender_objects):
     max_x = -99999999
     max_y = -99999999
     max_z = -99999999
-
 
     for mesh in meshes:
         for vert in mesh.vertices:
@@ -39,17 +45,14 @@ def get_model_bounding_box(blender_objects):
                 min_y = y
             if z < min_z:
                 min_z = z
-    return BoundingBox(
-            min_x, min_y, min_z,
-            max_x, max_y, max_z
-    )
+    return BoundingBox(min_x, min_y, min_z, max_x, max_y, max_z)
 
 
 def get_model_bounding_sphere(blender_objects):
     # TODO: optimize
 
     bbox = get_model_bounding_box(blender_objects)
-    meshes = (ob.data for ob in blender_objects if ob.type == 'MESH')
+    meshes = (ob.data for ob in blender_objects if ob.type == "MESH")
     vertices = (v.co for mesh in meshes for v in mesh.vertices)
 
     center_x = (bbox.min_x + bbox.max_x) / 2
@@ -105,7 +108,9 @@ def triangles_list_to_triangles_strip(blender_mesh):
         strip_indices = [v for v in current_face_verts if v not in current_strip[-2:]]
         if current_strip:
             face_to_add = tuple(current_strip[-2:]) + tuple(strip_indices)
-            if face_to_add != current_face_verts and face_to_add != tuple(reversed(current_face_verts)):
+            if face_to_add != current_face_verts and face_to_add != tuple(
+                reversed(current_face_verts)
+            ):
                 # we arrived here because the current face shares and edge with the face in the strip
                 # however, if we just add the verts, we would be changing the direction of the face
                 # so we create a degenerate triangle before adding to it to the strip
@@ -118,8 +123,11 @@ def triangles_list_to_triangles_strip(blender_mesh):
         for edge in current_face.edge_keys:
             if edge not in edges_faces:
                 continue
-            checked_edge = {face_index: edge for face_index in edges_faces[edge]
-                            if face_index != current_face_index and face_index not in done_faces_indices}
+            checked_edge = {
+                face_index: edge
+                for face_index in edges_faces[edge]
+                if face_index != current_face_index and face_index not in done_faces_indices
+            }
             possible_face_indices.update(checked_edge)
         for face_index, edge in possible_face_indices.items():
             if not current_strip:
@@ -164,47 +172,50 @@ def triangles_list_to_triangles_strip(blender_mesh):
 
 
 def get_textures_from_the_material(blender_material):
-    '''Get all image textures nodes form material and return them as a list
-        blender_material : bpy.data.materials[0] object
-    '''
+    """Get all image textures nodes form material and return them as a list
+    blender_material : bpy.data.materials[0] object
+    """
     textures = []
     if blender_material:
         if blender_material.node_tree:
             for tn in blender_material.node_tree.nodes:
-                if tn.type == 'TEX_IMAGE':
+                if tn.type == "TEX_IMAGE":
                     textures.append(tn)
     return textures
 
 
-def get_textures_from_blender_objects(blender_objects): # only blender export funcion
+def get_textures_from_blender_objects(blender_objects):  # only blender export funcion
     """Gets all materials from a scene and returns a set with data.textures objects
-        This is important for geting albam texture attributes before exporting
-        blender_objects : list of all object in scene
-        Only counting the first material of the mesh
+    This is important for geting albam texture attributes before exporting
+    blender_objects : list of all object in scene
+    Only counting the first material of the mesh
     """
     texture_data = [td for td in bpy.data.textures]
-    textures = set() 
-    meshes = {ob.data for ob in blender_objects if ob.type == 'MESH'} # add only meshes to the dictionary?
+    textures = set()
+    meshes = {
+        ob.data for ob in blender_objects if ob.type == "MESH"
+    }  # add only meshes to the dictionary?
     for ob in meshes:
         obt = get_textures_from_the_material(ob.materials[0])
         for tn in obt:
             for td in texture_data:
                 if tn.image == td.image:
                     textures.add((td))
-        '''Old code
+        """Old code
         for ts in ob.materials[0].texture_slots:#
             if ts and ts.texture and ts.texture.image:
                 textures.add(ts.texture)
         return sorted(textures, key=lambda t: t.name)
-        '''
+        """
     return sorted(textures, key=lambda t: t.image.name)
+
 
 def get_materials_from_blender_objects(blender_objects):
     """Get material data from objects
     Only counting the first material of the mesh
     """
     materials = set()
-    meshes = {ob.data for ob in blender_objects if ob.type == 'MESH'}
+    meshes = {ob.data for ob in blender_objects if ob.type == "MESH"}
     for ob in meshes:
         if not ob.materials:
             continue
@@ -213,7 +224,7 @@ def get_materials_from_blender_objects(blender_objects):
 
 
 def get_vertex_count_from_blender_objects(blender_objects):
-    return sum([len(ob.data.vertices) for ob in blender_objects if ob.type == 'MESH'])
+    return sum([len(ob.data.vertices) for ob in blender_objects if ob.type == "MESH"])
 
 
 def get_bone_indices_and_weights_per_vertex(blender_object):
@@ -223,11 +234,11 @@ def get_bone_indices_and_weights_per_vertex(blender_object):
     vertex_groups = blender_object.vertex_groups
     modifiers = {m.type: m for m in blender_object.modifiers}
     weights_per_vertex = {}
-    if blender_object.type != 'MESH':
-        raise TypeError('Blender object is not a mesh')
-    if not vertex_groups or 'ARMATURE' not in modifiers:
+    if blender_object.type != "MESH":
+        raise TypeError("Blender object is not a mesh")
+    if not vertex_groups or "ARMATURE" not in modifiers:
         return weights_per_vertex
-    armature = modifiers['ARMATURE'].object.data
+    armature = modifiers["ARMATURE"].object.data
     bone_names_to_index = {b.name: i for i, b in enumerate(armature.bones)}
     # https://www.blender.org/api/blender_python_api_current/bpy.types.VertexGroupElement.html
     vertex_groups = blender_object.vertex_groups

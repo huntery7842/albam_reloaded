@@ -10,20 +10,20 @@ class DynamicStructure:
 
     # TODO: change signature to make it clear that 'file_path' can be also a buffer
     def __new__(cls, file_path=None, *args, **kwargs):
-        cls_dict = {'_pack_': 1}
+        cls_dict = {"_pack_": 1}
         cls_dict.update(cls.__dict__)
-        cls_dict['_fields_'] = parse_fields(cls._fields_, file_path, **kwargs)
+        cls_dict["_fields_"] = parse_fields(cls._fields_, file_path, **kwargs)
 
         try:
-            generated_cls = type('Gen{}'.format(cls.__name__), (ctypes.Structure,), cls_dict)
+            generated_cls = type("Gen{}".format(cls.__name__), (ctypes.Structure,), cls_dict)
         except TypeError:
-            raise RuntimeError('Error generating class. Fields: {}'.format(cls_dict['_fields_']))
+            raise RuntimeError("Error generating class. Fields: {}".format(cls_dict["_fields_"]))
 
         if file_path:
             instance = generated_cls()
             instance._file_path = file_path  # TODO: move to 'meta' attribute.
             try:
-                with open(file_path, 'rb') as f:
+                with open(file_path, "rb") as f:
                     f.readinto(instance)
             except TypeError:
                 file_path.readinto(instance)
@@ -39,7 +39,7 @@ def parse_fields(sequence_of_tuples, file_path_or_buffer=None, **kwargs):
     try:
         os.path.isfile(file_path_or_buffer)
         is_file = True
-        buff = open(file_path_or_buffer, 'rb')
+        buff = open(file_path_or_buffer, "rb")
     except TypeError:
         buff = file_path_or_buffer
         is_file = False
@@ -51,9 +51,11 @@ def parse_fields(sequence_of_tuples, file_path_or_buffer=None, **kwargs):
             ctypes.sizeof(ctype_or_callable)
             ready_fields.append(t)
         except TypeError:
+
             class TmpStruct(ctypes.Structure):
                 _fields_ = ready_fields
                 _pack_ = 1
+
             if buff:
                 tmp_struct = TmpStruct()
                 buff.readinto(tmp_struct)
