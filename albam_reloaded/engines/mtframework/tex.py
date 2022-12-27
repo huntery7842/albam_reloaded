@@ -3,11 +3,9 @@ import os
 
 from albam_reloaded.image_formats.dds import DDSHeader, DDS
 from albam_reloaded.lib.structure import DynamicStructure
-from albam_reloaded.registry import blender_registry
 from .defaults import DEFAULT_TEXTURE
 
 
-@blender_registry.register_bpy_prop("texture", "unk_")
 class Tex112(DynamicStructure):
 
     ID_MAGIC = b"TEX"

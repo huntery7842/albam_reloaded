@@ -177,16 +177,6 @@ def _build_blender_mesh_from_mod(mod, mesh, mesh_index, name, materials):
             offset = loop.vertex_index * 2
             per_loop_list.extend((source_uvs[offset], source_uvs[offset + 1]))
         uv_layer.data.foreach_set("uv", per_loop_list)
-
-    # Saving unknown metadata for export
-    # TODO: use a util function
-    for field_tuple in mesh._fields_:
-        attr_name = field_tuple[0]
-        if not attr_name.startswith("unk_"):
-            continue
-        attr_value = getattr(mesh, attr_name)
-        setattr(me_ob, attr_name, attr_value)
-
     return ob
 
 
@@ -301,16 +291,6 @@ def _create_blender_textures_from_mod(mod, base_dir):
             texture.use_fake_user = True  # Set fake user to prevent removing after saving to .blend
             texture.image = image
         textures.append(texture)  # create a list with bpy.data.textures
-
-        # saving meta data for export
-        # TODO: use a util function
-        for field_tuple in tex._fields_:
-            attr_name = field_tuple[0]
-            if not attr_name.startswith("unk_"):
-                continue
-            attr_value = getattr(tex, attr_name)
-            setattr(texture, attr_name, attr_value)
-
     return textures
 
 
@@ -536,15 +516,6 @@ def _create_blender_materials_from_mod(mod, model_name, textures):
 
         link = blender_material.node_tree.links.new
         link(shader_node_group.outputs[0], material_output.inputs[0])
-
-        # unknown data for export, registered already
-        # TODO: do this with a util function
-        for field_tuple in material._fields_:  # add custom properties to material
-            attr_name = field_tuple[0]
-            if not attr_name.startswith("unk_"):
-                continue
-            attr_value = getattr(material, attr_name)
-            setattr(blender_material, attr_name, attr_value)
         materials.append(blender_material)
 
         for texture_code, tex_index in enumerate(material.texture_indices):

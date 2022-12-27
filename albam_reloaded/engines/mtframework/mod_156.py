@@ -13,7 +13,6 @@ from ctypes import (
 )
 
 from albam_reloaded.lib.structure import DynamicStructure
-from albam_reloaded.registry import blender_registry
 from .defaults import DEFAULT_MATERIAL, DEFAULT_MESH
 
 
@@ -136,7 +135,6 @@ class GroupData(Structure):
     _comments_ = {"group_index": "In ~25% of all RE5 mods, this value doesn't match the index"}
 
 
-@blender_registry.register_bpy_prop("material", "unk_")
 class MaterialData(Structure):
     _defaults_ = DEFAULT_MATERIAL
     _fields_ = (
@@ -240,7 +238,6 @@ class WeightBound(Structure):
     )
 
 
-@blender_registry.register_bpy_prop("mesh", "unk_")
 class Mesh156(LittleEndianStructure):
     _defaults_ = DEFAULT_MESH
     _fields_ = (
