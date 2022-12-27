@@ -65,7 +65,7 @@ class Arc(DynamicStructure):
             if not os.path.exists(file_dir):
                 os.makedirs(file_dir)
             with open(file_path, "wb") as w:
-                w.write(zlib.decompress(data[offset: offset + fe.zsize]))
+                w.write(zlib.decompress(data[offset : offset + fe.zsize]))
             offset += fe.zsize
 
     @classmethod

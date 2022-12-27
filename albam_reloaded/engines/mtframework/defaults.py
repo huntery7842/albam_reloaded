@@ -79,7 +79,7 @@ DEFAULT_MATERIAL = {
     "unk_f_09": 1.0,
     "unk_f_10": 0.0,
     "unk_f_11": 0.25,
-    "unk_detail_factor": 10.0, # detail map multiplier 10.00 default
+    "unk_detail_factor": 10.0,  # detail map multiplier 10.00 default
     "unk_f_13": 0.0,
     "unk_f_14": 0.5,
     "unk_f_15": 0.0,
@@ -93,7 +93,7 @@ DEFAULT_MATERIAL = {
     "unk_f_23": 2.3807287392126335e-37,
     "unk_f_24": 1.1210387714598537e-44,
     "unk_f_25": 0.0,
-    "unk_f_26": 0.0
+    "unk_f_26": 0.0,
 }
 
 

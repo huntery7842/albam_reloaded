@@ -13,8 +13,8 @@ from albam_reloaded.blender import (
 from albam_reloaded.registry import blender_registry
 
 # Load import/export functions into the blender_registry
-importlib.import_module('albam_reloaded.engines.mtframework.blender_import')
-importlib.import_module('albam_reloaded.engines.mtframework.blender_export')
+importlib.import_module("albam_reloaded.engines.mtframework.blender_import")
+importlib.import_module("albam_reloaded.engines.mtframework.blender_export")
 
 
 bl_info = {
@@ -70,15 +70,9 @@ def register():
     bpy.types.Object.albam_imported_item = bpy.props.PointerProperty(
         type=AlbamImportedItem
     )  # register new object properties
-    bpy.types.Scene.albam_export_settings = bpy.props.PointerProperty(
-        type=blender.AlbamExportSettings
-    )
-    bpy.types.Scene.albam_scene_meshes = bpy.props.PointerProperty(
-        type=bpy.types.Object
-    )
-    bpy.types.Scene.albam_export_settings = bpy.props.PointerProperty(
-        type=AlbamExportSettings
-    )
+    bpy.types.Scene.albam_export_settings = bpy.props.PointerProperty(type=AlbamExportSettings)
+    bpy.types.Scene.albam_scene_meshes = bpy.props.PointerProperty(type=bpy.types.Object)
+    bpy.types.Scene.albam_export_settings = bpy.props.PointerProperty(type=AlbamExportSettings)
 
 
 def unregister():

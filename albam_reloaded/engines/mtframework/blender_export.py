@@ -761,8 +761,10 @@ def _export_textures_and_materials(blender_objects, saved_mod):
                     textures.index(texture_data[0]) + 1
                 )  # get the texture data index,  texture_indices expects index-1 based
             except Exception:
-                msg = (f"No texture data container linked with {texture} texture was found. "
-                       "Please create it before the export")
+                msg = (
+                    f"No texture data container linked with {texture} texture was found. "
+                    "Please create it before the export"
+                )
                 raise ExportError(msg)
 
             texture_code = blender_texture_to_texture_code(texture_node)
