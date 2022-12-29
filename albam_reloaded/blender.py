@@ -3,7 +3,7 @@ import os
 import bpy
 
 from albam_reloaded.registry import blender_registry
-from albam_reloaded.engines.mtframework.tools import (
+from albam_reloaded.lib.blender import (
     show_message_box,
     split_UV_seams_operator,
     select_invalid_meshes_operator,
