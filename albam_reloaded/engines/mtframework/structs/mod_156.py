@@ -13,7 +13,6 @@ from ctypes import (
 )
 
 from albam_reloaded.lib.structure import DynamicStructure
-from ..defaults import DEFAULT_MATERIAL, DEFAULT_MESH
 
 
 def unk_data_depends_on_other_unk(tmp_struct):
@@ -136,7 +135,6 @@ class GroupData(Structure):
 
 
 class MaterialData(Structure):
-    _defaults_ = DEFAULT_MATERIAL
     _fields_ = (
         ("unk_01_flag_01", c_uint16, 1),  # previously c_ushort
         ("unk_01_flag_02", c_uint16, 1),
@@ -239,7 +237,6 @@ class WeightBound(Structure):
 
 
 class Mesh156(LittleEndianStructure):
-    _defaults_ = DEFAULT_MESH
     _fields_ = (
         ("unk_render_group_index", c_ushort),
         ("material_index", c_ushort),

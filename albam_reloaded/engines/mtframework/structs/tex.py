@@ -3,13 +3,11 @@ import os
 
 from albam_reloaded.image_formats.dds import DDSHeader, DDS
 from albam_reloaded.lib.structure import DynamicStructure
-from ..defaults import DEFAULT_TEXTURE
 
 
 class Tex112(DynamicStructure):
 
     ID_MAGIC = b"TEX"
-    _defaults_ = DEFAULT_TEXTURE
     _fields_ = (
         ("id_magic", c_char * 4),
         ("version", c_short),
