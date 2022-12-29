@@ -1,3 +1,4 @@
+from collections import Counter
 import ntpath
 import os
 
@@ -6,7 +7,6 @@ import bpy
 
 from albam_reloaded.exceptions import TextureError
 from . import Tex112
-from .utils import texture_code_to_blender_texture
 
 
 def _create_blender_textures_from_mod(mod, base_dir):
@@ -325,3 +325,131 @@ def _get_path_to_albam():
             return path
         else:
             pass
+
+
+def texture_code_to_blender_texture(texture_code, blender_texture_node, blender_material):
+    """
+    Function for detecting texture type and map it to blender shader sockets
+    texture_code : index for detecting type of a texture
+    blender_texture_node : image texture node
+    blender_material : shader material
+    """
+    # blender_texture_node.use_map_alpha = True
+    shader_node_grp = blender_material.node_tree.nodes.get("MTFrameworkGroup")
+    link = blender_material.node_tree.links.new
+
+    if texture_code == 0:
+        # Diffuse _BM
+        link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[0])
+        link(blender_texture_node.outputs["Alpha"], shader_node_grp.inputs[1])
+        blender_texture_node.location = (-300, 350)
+        # blender_texture_node.use_map_color_diffuse = True
+    elif texture_code == 1:
+        # Normal _NM
+        blender_texture_node.location = (-300, 0)
+        link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[2])
+        link(blender_texture_node.outputs["Alpha"], shader_node_grp.inputs[3])
+
+    elif texture_code == 2:
+        # Specular _MM
+        blender_texture_node.location = (-300, -350)
+        link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[4])
+
+    elif texture_code == 3:
+        # Lightmap _LM
+        blender_texture_node.location = (-300, -700)
+        uv_map_node = blender_material.node_tree.nodes.new("ShaderNodeUVMap")
+        uv_map_node.location = (-500, -700)
+        uv_map_node.uv_map = "lightmap"
+        link(uv_map_node.outputs[0], blender_texture_node.inputs[0])
+        link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[5])
+        shader_node_grp.inputs[6].default_value = 1
+
+    elif texture_code == 4:
+        # Emissive mask ?
+        blender_texture_node.location = (-300, -1050)
+
+    elif texture_code == 5:
+        # Alpha mask _AM
+        blender_texture_node.location = (-300, -1400)
+        link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[7])
+        shader_node_grp.inputs[8].default_value = 1
+
+    elif texture_code == 7:
+        # Detail normal map
+        blender_texture_node.location = (-300, -1750)
+        tex_coord_node = blender_material.node_tree.nodes.new("ShaderNodeTexCoord")
+        tex_coord_node.location = (-700, -1750)
+        mapping_node = blender_material.node_tree.nodes.new("ShaderNodeMapping")
+        mapping_node.location = (-500, -1750)
+
+        link(tex_coord_node.outputs[2], mapping_node.inputs[0])
+        link(mapping_node.outputs[0], blender_texture_node.inputs[0])
+        link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[10])
+        link(blender_texture_node.outputs["Alpha"], shader_node_grp.inputs[11])
+
+        shader_node_grp.inputs[12].default_value = 1
+        # TODO move it to function
+        # Link the material properites value
+        for x in range(3):
+            d = mapping_node.inputs[3].driver_add("default_value", x)
+            var1 = d.driver.variables.new()
+            var1.name = "detail_multiplier"
+            var1.targets[0].id_type = "MATERIAL"
+            var1.targets[0].id = blender_material
+            var1.targets[0].data_path = '["unk_detail_factor"]'
+            d.driver.expression = var1.name
+    else:
+        print("texture_code not supported", texture_code)
+        # TODO: 6 CM cubemap
+
+
+def blender_texture_to_texture_code(blender_texture_image_node):
+    """This function return a type ID of the image texture node dependind of node connetion
+    blender_texture_image_node : bpy.types.ShaderNodeTexImage
+    """
+    texture_code = None
+    color_out = blender_texture_image_node.outputs["Color"]
+    try:
+        socket_name = color_out.links[0].to_socket.name
+    except Exception:
+        print("the texture has no connections")
+        return None
+
+    tex_codes_mapper = {
+        "Diffuse BM": 0,
+        "Normal NM": 1,
+        "Specular MM": 2,
+        "Lightmap LM": 3,
+        "Alpha Mask AM": 5,
+        "Environment CM": 6,
+        "Detail DNM": 7,
+    }
+
+    texture_code = tex_codes_mapper.get(socket_name)
+    if texture_code is None:
+        return None
+
+    return texture_code
+
+
+def get_texture_dirs(mod):
+    """Returns a dict of <texture_name>: <texture_dir>"""
+    texture_dirs = {}
+    for texture_path in mod.textures_array:
+        texture_path = texture_path[:].decode("ascii").partition("\x00")[0]
+        texture_dir, texture_name_no_ext = ntpath.split(texture_path)
+        texture_dirs[texture_name_no_ext] = texture_dir
+    return texture_dirs
+
+
+def get_default_texture_dir(mod):
+    if not mod.textures_array:
+        return None
+    texture_dirs = []
+    for texture_path in mod.textures_array:
+        texture_path = texture_path[:].decode("ascii").partition("\x00")[0]
+        texture_dir = ntpath.split(texture_path)[0]
+        texture_dirs.append(texture_dir)
+
+    return Counter(texture_dirs).most_common(1)[0][0]
