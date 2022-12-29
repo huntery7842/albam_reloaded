@@ -2,7 +2,7 @@ import importlib
 
 import bpy
 
-from albam_reloaded.blender import classes_to_register
+from albam_reloaded.blender_ui import classes_to_register
 
 # Load import/export functions into the blender_registry
 importlib.import_module("albam_reloaded.engines.mtframework.archive")
