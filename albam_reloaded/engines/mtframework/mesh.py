@@ -17,7 +17,7 @@ from .utils import (
     get_bone_parents_from_mod,
     transform_vertices_from_bbox,
 )
-from .mappers import BONE_INDEX_TO_GROUP
+from . import BONE_INDEX_TO_GROUP
 from .material import _create_blender_textures_from_mod, _create_blender_materials_from_mod
 
 
