@@ -1,6 +1,6 @@
-from .arc import Arc
-from .mod_156 import Mod156
-from .tex import Tex112
+from .structs.arc import Arc
+from .structs.mod_156 import Mod156
+from .structs.tex import Tex112
 from .mappers import FILE_ID_TO_EXTENSION, EXTENSION_TO_FILE_ID
 
 

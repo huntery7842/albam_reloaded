@@ -3,7 +3,7 @@ from collections import Counter
 import ntpath
 
 from albam_reloaded.exceptions import BuildMeshError
-from albam_reloaded.engines.mtframework.mod_156 import (
+from albam_reloaded.engines.mtframework.structs.mod_156 import (
     VERTEX_FORMATS_TO_CLASSES,
 )
 from albam_reloaded.lib.structure import get_size

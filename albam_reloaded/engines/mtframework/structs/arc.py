@@ -4,7 +4,7 @@ import os
 import zlib
 
 from albam_reloaded.lib.structure import DynamicStructure
-from .mappers import FILE_ID_TO_EXTENSION, EXTENSION_TO_FILE_ID
+from ..mappers import FILE_ID_TO_EXTENSION, EXTENSION_TO_FILE_ID
 
 PADDING_SIZE = 32768
 

@@ -13,7 +13,7 @@ from ctypes import (
 )
 
 from albam_reloaded.lib.structure import DynamicStructure
-from .defaults import DEFAULT_MATERIAL, DEFAULT_MESH
+from ..defaults import DEFAULT_MATERIAL, DEFAULT_MESH
 
 
 def unk_data_depends_on_other_unk(tmp_struct):

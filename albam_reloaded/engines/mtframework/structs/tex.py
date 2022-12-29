@@ -3,7 +3,7 @@ import os
 
 from albam_reloaded.image_formats.dds import DDSHeader, DDS
 from albam_reloaded.lib.structure import DynamicStructure
-from .defaults import DEFAULT_TEXTURE
+from ..defaults import DEFAULT_TEXTURE
 
 
 class Tex112(DynamicStructure):
