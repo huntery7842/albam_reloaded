@@ -5,6 +5,19 @@ from albam_reloaded.image_formats.dds import DDSHeader, DDS
 from albam_reloaded.lib.structure import DynamicStructure
 
 
+# XXX yuck
+def get_data_length(tmp_struct, file_path=None):
+    if file_path:
+        try:
+            length = os.path.getsize(file_path) - sizeof(tmp_struct)
+        except TypeError:
+            # XXX: inefficient?
+            length = len(file_path.getbuffer()) - sizeof(tmp_struct)
+    else:
+        length = len(tmp_struct.dds_data)
+    return length
+
+
 class Tex112(DynamicStructure):
 
     ID_MAGIC = b"TEX"
@@ -25,12 +38,7 @@ class Tex112(DynamicStructure):
         ("unk_f_blue", c_float),
         ("unk_f_alpha", c_float),
         ("mipmap_offsets", lambda s: c_uint * s.mipmap_count),
-        (
-            "dds_data",
-            lambda s, f: c_byte * (os.path.getsize(f) - 40 - sizeof(s.mipmap_offsets))
-            if f
-            else c_byte * len(s.dds_data),
-        ),
+        ('dds_data', lambda s, f: c_byte * get_data_length(s, f)),
     )
 
     def to_dds(self):

@@ -1,25 +1,28 @@
-from collections import Counter
-import ntpath
+import io
 import os
+from pathlib import PureWindowsPath
 
 import addon_utils
 import bpy
 
 from albam_reloaded.exceptions import TextureError
 from . import Tex112
+from .structs.arc import EXTENSION_TO_FILE_ID
 
 
-def build_blender_materials(mod, model_name, textures):
+def build_blender_materials(arc, mod, name_prefix="material"):
+
+    textures = build_blender_textures(arc, mod)
     materials = []
+
     if not bpy.data.node_groups.get("MT Framework shader"):
         _create_shader_node_group()
 
     for i, material in enumerate(mod.materials_data_array):
-        blender_material = bpy.data.materials.new("{}_{}".format(model_name, str(i).zfill(2)))
+        blender_material = bpy.data.materials.new(f"{name_prefix}_{str(i).zfill(2)}")
         blender_material.use_nodes = True
-        blender_material.blend_method = (
-            "CLIP"  # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
-        )
+        # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
+        blender_material.blend_method = "CLIP"
         node_to_delete = blender_material.node_tree.nodes.get("Principled BSDF")
         blender_material.node_tree.nodes.remove(node_to_delete)
         # principled_node.inputs['Specular'].default_value = 0.2 # change specular
@@ -40,24 +43,19 @@ def build_blender_materials(mod, model_name, textures):
             try:
                 texture_target = textures[tex_index]
             except IndexError:
-                # TODO
-                print("tex_index {} not found. Texture len(): {}".format(tex_index, len(textures)))
+                print(f"tex_index {tex_index} not found. Texture len(): {len(textures)}")
                 continue
             if not texture_target:
                 # This means the conversion failed before
-                # TODO: logging
                 continue
             if texture_code == 6:
                 print("texture_code not supported", texture_code)
                 continue
             texture_node = blender_material.node_tree.nodes.new("ShaderNodeTexImage")
             texture_code_to_blender_texture(texture_code, texture_node, blender_material)
-            texture_node.image = (
-                texture_target.image
-            )  # set bpy.data.textures[].image as a texures for ShaderNodeTexImage
-            if (
-                texture_code == 1 or texture_code == 7
-            ):  # change color settings for normal and detail maps
+            texture_node.image = texture_target
+            # change color settings for normal and detail maps
+            if texture_code == 1 or texture_code == 7:
                 texture_node.image.colorspace_settings.name = "Non-Color"
 
     return materials
@@ -73,58 +71,34 @@ def _get_path_to_albam():
             pass
 
 
-def build_blender_textures(mod, base_dir):
+def build_blender_textures(arc, mod):
     textures = [None]  # materials refer to textures in index-1
-    # TODO: check why in Arc.header.file_entries[n].file_path it returns a bytes, and
-    # here the whole array of chars
+    tex_type = EXTENSION_TO_FILE_ID['tex']
 
-    for i, texture_path in enumerate(mod.textures_array):
-        path = (
-            texture_path[:].decode("ascii").partition("\x00")[0]
-        )  # relative path to a texture in the ARC archive without extension
-        path = os.path.join(base_dir, *path.split(ntpath.sep))  # full path to a texture
-        path = ".".join((path, "tex"))  # full path to a texture with .tex extension
-        if not os.path.isfile(path):
-            # TODO: log warnings, figure out 'rtex' format
-            print("path {} does not exist".format(path))
-            # add a placeholder instead of the missing texure
-            texture_name_no_extension = os.path.splitext(os.path.basename(path))[0]
-            texture_name_no_extension = str(i).zfill(2) + texture_name_no_extension
-            texture = bpy.data.textures.new(texture_name_no_extension, type="IMAGE")
-            texture.use_fake_user = True
-
-            image_path = _get_path_to_albam()
-            image_path = os.path.join(image_path, "resourses", "missing texture.dds")
-            dummy_image = bpy.data.images.load(image_path)
-
-            texture.image = dummy_image
-            texture_node_name = texture_name_no_extension + ".dds"
-            texture.image.name = texture_node_name
-            textures.append(texture)
+    for i, raw_texture_path in enumerate(mod.textures_array):
+        texture_path = raw_texture_path[:].partition(b'\x00')[0]
+        tex_buffer = arc.get_file(texture_path, tex_type)
+        if not tex_buffer:
+            print(f'texture_path {texture_path} not found in arc')
+            # TODO: handle missing texture
             continue
-        tex = Tex112(path)
+
+        tex = Tex112(file_path=io.BytesIO(tex_buffer))
         try:
             dds = tex.to_dds()
         except TextureError as err:
             # TODO: log this instead of printing it
-            print('Error converting "{}"to dds: {}'.format(path, err))
+            print(f'Error converting "{texture_path}" to dds: {err}')
             textures.append(None)
             continue
-        dds_path = path.replace(".tex", ".dds")  # change extension in the full path
-        with open(dds_path, "wb") as w:  # write bynary
-            w.write(dds)
-        image = bpy.data.images.load(dds_path, check_existing=True)
-        texture_name_no_extension = os.path.splitext(os.path.basename(path))[0]
-        texture_name_no_extension = str(i).zfill(2) + texture_name_no_extension
-        texture = bpy.data.textures.get(texture_name_no_extension)
-        # Create a texture data block if not exist
-        if not texture:
-            texture = bpy.data.textures.new(
-                texture_name_no_extension, type="IMAGE"
-            )  # bpy.data.textures['00pl0200_09AllHair_BM']
-            texture.use_fake_user = True  # Set fake user to prevent removing after saving to .blend
-            texture.image = image
-        textures.append(texture)  # create a list with bpy.data.textures
+
+        tex_name = PureWindowsPath(texture_path.decode()).name
+        bl_image = bpy.data.images.new(f'{tex_name}.dds', tex.width, tex.height)
+        bl_image.source = 'FILE'
+        dds_bytes = bytes(dds)
+        bl_image.pack(data=dds_bytes, data_len=len(dds_bytes))
+        textures.append(bl_image)
+
     return textures
 
 
@@ -430,23 +404,18 @@ def blender_texture_to_texture_code(blender_texture_image_node):
     return texture_code
 
 
-def get_texture_dirs(mod):
-    """Returns a dict of <texture_name>: <texture_dir>"""
-    texture_dirs = {}
-    for texture_path in mod.textures_array:
-        texture_path = texture_path[:].decode("ascii").partition("\x00")[0]
-        texture_dir, texture_name_no_ext = ntpath.split(texture_path)
-        texture_dirs[texture_name_no_ext] = texture_dir
-    return texture_dirs
+def _handle_missing_texture(path, index):
+    texture_name_no_extension = os.path.splitext(os.path.basename(path))[0]
+    texture_name_no_extension = str(index).zfill(2) + texture_name_no_extension
+    texture = bpy.data.textures.new(texture_name_no_extension, type="IMAGE")
+    texture.use_fake_user = True
 
+    image_path = _get_path_to_albam()
+    image_path = os.path.join(image_path, "resourses", "missing texture.dds")
+    dummy_image = bpy.data.images.load(image_path)
 
-def get_default_texture_dir(mod):
-    if not mod.textures_array:
-        return None
-    texture_dirs = []
-    for texture_path in mod.textures_array:
-        texture_path = texture_path[:].decode("ascii").partition("\x00")[0]
-        texture_dir = ntpath.split(texture_path)[0]
-        texture_dirs.append(texture_dir)
+    texture.image = dummy_image
+    texture_node_name = texture_name_no_extension + ".dds"
+    texture.image.name = texture_node_name
 
-    return Counter(texture_dirs).most_common(1)[0][0]
+    return texture

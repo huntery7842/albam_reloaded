@@ -4,10 +4,6 @@ import bpy
 
 from albam_reloaded.blender_ui import classes_to_register
 
-# Load import/export functions into the blender_registry
-importlib.import_module("albam_reloaded.engines.mtframework.archive")
-importlib.import_module("albam_reloaded.engines.mtframework.mesh")
-
 
 bl_info = {
     "name": "Albam Reloaded",
@@ -23,6 +19,8 @@ bl_info = {
 
 
 def register():
+    # Load registered functions into the blender_registry
+    importlib.import_module("albam_reloaded.engines.mtframework.archive")
     for cls in classes_to_register:
         bpy.utils.register_class(cls)
     bpy.types.Scene.albam_scene_meshes = bpy.props.PointerProperty(type=bpy.types.Object)

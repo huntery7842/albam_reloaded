@@ -1,4 +1,3 @@
-from collections import defaultdict
 
 
 class BlenderRegistry:
@@ -6,7 +5,6 @@ class BlenderRegistry:
     def __init__(self):
         self.import_registry = {}
         self.export_registry = {}
-        self.bpy_props = defaultdict(list)  # identifier: [(prop_name, prop_type, default)]
 
     def register_function(self, func_type, identifier):
         def decorator(f):

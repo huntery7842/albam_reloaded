@@ -38,7 +38,7 @@ def parse_fields(sequence_of_tuples, file_path_or_buffer=None, **kwargs):
         os.path.isfile(file_path_or_buffer)
         is_file = True
         buff = open(file_path_or_buffer, "rb")
-    except TypeError:
+    except (TypeError, ValueError):
         buff = file_path_or_buffer
         is_file = False
 

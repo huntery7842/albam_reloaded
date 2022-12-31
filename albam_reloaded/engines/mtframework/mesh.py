@@ -11,9 +11,10 @@ from albam_reloaded.lib.blender import strip_triangles_to_triangles_list
 from albam_reloaded.lib.half_float import unpack_half_float
 from albam_reloaded.lib.misc import chunks
 from albam_reloaded.lib.structure import get_size
-from .structs.mod_156 import VERTEX_FORMATS_TO_CLASSES
 from . import Mod156, BONE_INDEX_TO_GROUP
+from .material import build_blender_materials
 from .structs.arc import EXTENSION_TO_FILE_ID
+from .structs.mod_156 import VERTEX_FORMATS_TO_CLASSES
 
 
 def build_blender_model(arc, mod_file_entry):
@@ -24,8 +25,7 @@ def build_blender_model(arc, mod_file_entry):
     mod_buffer = arc.get_file(mod_file_entry.file_path, mod_type)
     mod = Mod156(file_path=io.BytesIO(mod_buffer))
 
-    # materials = build_blender_materials(arc, mod, bl_mod_container_name)
-    materials = []
+    materials = build_blender_materials(arc, mod, bl_mod_container_name)
     skeleton = build_blender_armature(mod, bl_mod_container)
     meshes_parent = skeleton or bl_mod_container
 
