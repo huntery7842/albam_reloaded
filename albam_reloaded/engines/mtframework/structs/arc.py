@@ -5,7 +5,6 @@ import zlib
 
 from albam_reloaded.lib.structure import DynamicStructure
 
-
 PADDING_SIZE = 32768
 
 
@@ -14,7 +13,7 @@ class FileEntry(Structure):
 
     _fields_ = (
         ("file_path", c_char * MAX_FILE_PATH),
-        ("file_id", c_int),
+        ("file_type", c_int),
         ("zsize", c_uint),
         ("size", c_uint, 24),
         ("flags", c_uint, 8),
@@ -60,7 +59,7 @@ class Arc(DynamicStructure):
         output_dir = os.path.abspath(output_dir)
         for i in range(self.files_count):
             fe = self.file_entries[i]
-            file_path = self._get_path(fe.file_path, fe.file_id, output_dir)
+            file_path = self._get_path(fe.file_path, fe.file_type, output_dir)
             file_dir = os.path.dirname(file_path)
             if not os.path.exists(file_dir):
                 os.makedirs(file_dir)
@@ -68,9 +67,28 @@ class Arc(DynamicStructure):
                 w.write(zlib.decompress(data[offset : offset + fe.zsize]))
             offset += fe.zsize
 
+    def get_file_entries_by_type(self, file_type):
+        filtered = []
+        for fe in self.file_entries:
+            if fe.file_type == file_type:
+                filtered.append(fe)
+        return filtered
+
+    def get_file(self, file_path, file_type):
+        file_ = None
+
+        for fe in self.file_entries:
+            if fe.file_path == file_path and fe.file_type == file_type:
+                data = memoryview(self.data)
+                extra = sizeof(self.padding) + sizeof(self.file_entries) + 8
+                file_ = zlib.decompress(
+                    data[fe.offset - extra: fe.offset + fe.zsize - extra]
+                )
+                break
+        return file_
+
     @classmethod
     def from_dir(cls, source_path):
-        # XXX TMP, circular import
         file_paths = {
             os.path.join(root, f) for root, _, files in os.walk(source_path) for f in files
         }
@@ -87,7 +105,7 @@ class Arc(DynamicStructure):
             ext = os.path.splitext(file_path)[1].replace(".", "")
             file_entries[i] = FileEntry(
                 file_path=cls._set_path(source_path, file_path),
-                file_id=EXTENSION_TO_FILE_ID.get(ext) or 0,
+                file_type=EXTENSION_TO_FILE_ID.get(ext) or 0,
                 flags=64,  # always compressing
                 size=os.path.getsize(file_path),
                 zsize=len(chunk),
@@ -106,7 +124,6 @@ class Arc(DynamicStructure):
 
     @staticmethod
     def _get_path(file_path, file_type_id, output_path):
-        # XXX Tmp, circular import
         file_extension = FILE_ID_TO_EXTENSION.get(file_type_id) or str(file_type_id)
         file_path = file_path.decode("ascii")
         file_path = ".".join((file_path, file_extension))

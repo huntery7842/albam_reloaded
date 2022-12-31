@@ -9,7 +9,7 @@ from albam_reloaded.exceptions import TextureError
 from . import Tex112
 
 
-def _create_blender_textures_from_mod(mod, base_dir):
+def build_blender_textures(mod, base_dir):
     textures = [None]  # materials refer to textures in index-1
     # TODO: check why in Arc.header.file_entries[n].file_path it returns a bytes, and
     # here the whole array of chars
@@ -260,8 +260,7 @@ def _create_shader_node_group():
     return shader_group
 
 
-def _create_blender_materials_from_mod(mod, model_name, textures):
-    """textures: bpy.data.textures"""
+def build_blender_materials(mod, model_name, textures):
     materials = []
     if not bpy.data.node_groups.get("MT Framework shader"):
         _create_shader_node_group()
@@ -272,8 +271,6 @@ def _create_blender_materials_from_mod(mod, model_name, textures):
         blender_material.blend_method = (
             "CLIP"  # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
         )
-        # blender_material.alpha_treshhold = 0.33
-
         node_to_delete = blender_material.node_tree.nodes.get("Principled BSDF")
         blender_material.node_tree.nodes.remove(node_to_delete)
         # principled_node.inputs['Specular'].default_value = 0.2 # change specular

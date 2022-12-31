@@ -1,4 +1,5 @@
 import ctypes
+import io
 from itertools import chain
 import os
 
@@ -10,51 +11,43 @@ from albam_reloaded.lib.blender import strip_triangles_to_triangles_list
 from albam_reloaded.lib.half_float import unpack_half_float
 from albam_reloaded.lib.misc import chunks
 from albam_reloaded.lib.structure import get_size
-from albam_reloaded.registry import blender_registry
 from .structs.mod_156 import VERTEX_FORMATS_TO_CLASSES
 from . import Mod156, BONE_INDEX_TO_GROUP
-from .material import _create_blender_textures_from_mod, _create_blender_materials_from_mod
+from .structs.arc import EXTENSION_TO_FILE_ID
 
 
-@blender_registry.register_function("import", identifier=b"MOD\x00")
-def import_mod(blender_object, file_path, **kwargs):
-    base_dir = kwargs.get("base_dir")  # full path to _extracted folder
+def build_blender_model(arc, mod_file_entry):
+    bl_mod_container_name = mod_file_entry.file_path.decode()
+    bl_mod_container = bpy.data.objects.new(bl_mod_container_name, None)
+    mod_type = EXTENSION_TO_FILE_ID['mod']
 
-    mod = Mod156(file_path=file_path)
-    textures = _create_blender_textures_from_mod(mod, base_dir)
-    materials = _create_blender_materials_from_mod(mod, blender_object.name, textures)
+    mod_buffer = arc.get_file(mod_file_entry.file_path, mod_type)
+    mod = Mod156(file_path=io.BytesIO(mod_buffer))
 
-    # To simplify, import only main level of detail meshes
+    # materials = build_blender_materials(arc, mod, bl_mod_container_name)
+    materials = []
+    skeleton = build_blender_armature(mod, bl_mod_container)
+    meshes_parent = skeleton or bl_mod_container
+
     LODS_TO_IMPORT = (1, 255)
-    blender_meshes = []
     meshes = [m for m in mod.meshes_array if m.level_of_detail in LODS_TO_IMPORT]
     for i, mesh in enumerate(meshes):
-        name = _create_mesh_name(i, file_path)
+        bl_mesh_name = f'{bl_mod_container_name}_{i}'
         try:
-            m = _build_blender_mesh_from_mod(mod, mesh, i, name, materials)
-            blender_meshes.append(m)
-        except BuildMeshError as err:
-            # TODO: logging
-            print(f"Error building mesh {i} for mod {file_path}")
-            print("Details:", err)
+            bl_mesh_ob = build_blender_mesh(mod, mesh, i, bl_mesh_name, materials)
+            bl_mesh_ob.parent = meshes_parent
+            if skeleton:
+                modifier = bl_mesh_ob.modifiers.new(type="ARMATURE", name="armature")
+                modifier.object = meshes_parent
+                modifier.use_vertex_groups = True
+        except Exception as err:
+            print(f'[{bl_mod_container_name}] error building mesh {i} {err}')
+            raise
 
-    if mod.bone_count:
-        armature_name = "skel_{}".format(blender_object.name)
-        root = _create_blender_armature_from_mod(blender_object, mod, armature_name)
-        root.show_in_front = True  # set x-ray view for bones
-    else:
-        root = blender_object
-
-    for mesh in blender_meshes:
-        bpy.context.collection.objects.link(mesh)
-        mesh.parent = root
-        if mod.bone_count:
-            modifier = mesh.modifiers.new(type="ARMATURE", name=blender_object.name)
-            modifier.object = root
-            modifier.use_vertex_groups = True
+    return bl_mod_container
 
 
-def _build_blender_mesh_from_mod(mod, mesh, mesh_index, name, materials):
+def build_blender_mesh(mod, mesh, mesh_index, name, materials):
     me_ob = bpy.data.meshes.new(name)
     ob = bpy.data.objects.new(name, me_ob)
 
@@ -86,17 +79,13 @@ def _build_blender_mesh_from_mod(mod, mesh, mesh_index, name, materials):
     me_ob.normals_split_custom_set_from_vertices(vertex_normals)
     me_ob.use_auto_smooth = True
 
-    mesh_material = materials[mesh.material_index]
-    """Old code
-    if not mesh.use_cast_shadows and mesh_material.use_cast_shadows:
-        mesh_material.use_cast_shadows = False"""
-    if (
-        not mesh.use_cast_shadows and mesh_material.shadow_method
-    ):  # code gets .use_cast_shadows from mesh's custom props
-        mesh_material.shadow_method = (
-            "NONE"  # if use_cast_shadows is false and a material shadows is enabled, set it to NONE
-        )
-    me_ob.materials.append(mesh_material)
+    try:
+        mesh_material = materials[mesh.material_index]
+        if not mesh.use_cast_shadows and mesh_material.shadow_method:
+            mesh_material.shadow_method = "NONE"
+        me_ob.materials.append(mesh_material)
+    except IndexError:
+        print("material not found")
 
     for bone_index, data in weights_per_bone.items():
         vg = ob.vertex_groups.new(name=str(bone_index))
@@ -129,10 +118,6 @@ def _build_blender_mesh_from_mod(mod, mesh, mesh_index, name, materials):
 
 
 def _import_vertices(mod, mesh):
-    return _import_vertices_mod156(mod, mesh)
-
-
-def _import_vertices_mod156(mod, mesh):
     vertices_array = get_vertices_array(mod, mesh)
 
     if mesh.vertex_format != 0:
@@ -177,17 +162,17 @@ def _import_vertices_mod156(mod, mesh):
     }
 
 
-def _create_blender_armature_from_mod(blender_object, mod, armature_name):
+def build_blender_armature(mod, bl_object_parent):
+    armature_name = bl_object_parent.name + "_skel"
     armature = bpy.data.armatures.new(armature_name)
     armature_ob = bpy.data.objects.new(armature_name, armature)
-    armature_ob.parent = blender_object
+    armature_ob.parent = bl_object_parent
+    armature_ob.show_in_front = True
 
-    # set to Object mode
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
-    # deselect all objects
     for i in bpy.context.scene.objects:
-        i.select_set(False)  # my change
+        i.select_set(False)
     bpy.context.collection.objects.link(armature_ob)
     bpy.context.view_layer.objects.active = armature_ob
     armature_ob.select_set(True)

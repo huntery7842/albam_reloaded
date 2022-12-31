@@ -50,14 +50,12 @@ class AlbamImportOperator(bpy.types.Operator):
     DIRECTORY = bpy.props.StringProperty(subtype="DIR_PATH")
     FILES = bpy.props.CollectionProperty(name="adf", type=bpy.types.OperatorFileListElement)
     FILTER_GLOB = bpy.props.StringProperty(default="*.arc", options={"HIDDEN"})
-    UNPACK_DIR = bpy.props.StringProperty(options={"HIDDEN"})
 
     bl_idname = "albam_import.item"
     bl_label = "import item"
     directory: DIRECTORY
     files: FILES
     filter_glob: FILTER_GLOB
-    unpack_dir: UNPACK_DIR
 
     def invoke(self, context, event):
         wm = context.window_manager
@@ -69,36 +67,31 @@ class AlbamImportOperator(bpy.types.Operator):
             os.path.join(self.directory, f.name) for f in self.files
         ]  # combine path to file and file name list to a new list
         for file_path in to_import:
-            self._import_file(file_path=file_path, context=context)
+            self._import_file(file_path=file_path)
 
         return {"FINISHED"}
 
-    def _import_file(self, **kwargs):
-        parent = kwargs.get("parent")  # ?
-        file_path = kwargs.get("file_path")
-        context = kwargs["context"]
-        kwargs["unpack_dir"] = self.unpack_dir
-        with open(file_path, "rb") as f:  # read file as a binary
-            data = f.read()  # store file to data var
-        id_magic = data[:4]  # get first 4 bytes(?)
+    @staticmethod
+    def _import_file(file_path):
+
+        with open(file_path, "rb") as f:
+            data = f.read()
+        id_magic = data[:4]
 
         func = blender_registry.import_registry.get(id_magic)  # find header in dictionary
         if not func:
-            raise TypeError("File not supported for import. Id magic: {}".format(id_magic))
-
-        name = os.path.basename(file_path)  # name of the imported archive
-        obj = bpy.data.objects.new(name, None)
-        obj.parent = parent
+            raise TypeError(f"File not supported for import. Id magic: {id_magic}")
 
         # TODO: proper logging/raising and rollback if failure
-        results_dict = func(blender_object=obj, **kwargs)
-        bpy.context.collection.objects.link(obj)
+        bl_container = func(file_path)
 
-        if results_dict:
-            files = results_dict.get("files", [])
-            kwargs = results_dict.get("kwargs", {})
-            for f in files:
-                self._import_file(file_path=f, context=context, **kwargs)
+        bpy.context.collection.objects.link(bl_container)
+        for child in bl_container.children_recursive:
+            try:
+                # already linked
+                bpy.context.collection.objects.link(child)
+            except RuntimeError:
+                pass
 
 
 class AlbamFixLeakedTexuresOperator(bpy.types.Operator):
