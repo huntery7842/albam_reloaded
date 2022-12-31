@@ -9,6 +9,70 @@ from albam_reloaded.exceptions import TextureError
 from . import Tex112
 
 
+def build_blender_materials(mod, model_name, textures):
+    materials = []
+    if not bpy.data.node_groups.get("MT Framework shader"):
+        _create_shader_node_group()
+
+    for i, material in enumerate(mod.materials_data_array):
+        blender_material = bpy.data.materials.new("{}_{}".format(model_name, str(i).zfill(2)))
+        blender_material.use_nodes = True
+        blender_material.blend_method = (
+            "CLIP"  # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
+        )
+        node_to_delete = blender_material.node_tree.nodes.get("Principled BSDF")
+        blender_material.node_tree.nodes.remove(node_to_delete)
+        # principled_node.inputs['Specular'].default_value = 0.2 # change specular
+        shader_node_group = blender_material.node_tree.nodes.new("ShaderNodeGroup")
+        shader_node_group.node_tree = bpy.data.node_groups["MT Framework shader"]
+        shader_node_group.name = "MTFrameworkGroup"
+        shader_node_group.width = 300
+        material_output = blender_material.node_tree.nodes.get("Material Output")
+        material_output.location = (400, 0)
+
+        link = blender_material.node_tree.links.new
+        link(shader_node_group.outputs[0], material_output.inputs[0])
+        materials.append(blender_material)
+
+        for texture_code, tex_index in enumerate(material.texture_indices):
+            if not tex_index:
+                continue
+            try:
+                texture_target = textures[tex_index]
+            except IndexError:
+                # TODO
+                print("tex_index {} not found. Texture len(): {}".format(tex_index, len(textures)))
+                continue
+            if not texture_target:
+                # This means the conversion failed before
+                # TODO: logging
+                continue
+            if texture_code == 6:
+                print("texture_code not supported", texture_code)
+                continue
+            texture_node = blender_material.node_tree.nodes.new("ShaderNodeTexImage")
+            texture_code_to_blender_texture(texture_code, texture_node, blender_material)
+            texture_node.image = (
+                texture_target.image
+            )  # set bpy.data.textures[].image as a texures for ShaderNodeTexImage
+            if (
+                texture_code == 1 or texture_code == 7
+            ):  # change color settings for normal and detail maps
+                texture_node.image.colorspace_settings.name = "Non-Color"
+
+    return materials
+
+
+def _get_path_to_albam():
+    for mod in addon_utils.modules():
+        if mod.bl_info["name"] == "Albam Reloaded":
+            filepath = mod.__file__
+            path = os.path.split(filepath)[0]
+            return path
+        else:
+            pass
+
+
 def build_blender_textures(mod, base_dir):
     textures = [None]  # materials refer to textures in index-1
     # TODO: check why in Arc.header.file_entries[n].file_path it returns a bytes, and
@@ -258,70 +322,6 @@ def _create_shader_node_group():
     link(group_inputs.outputs[12], use_detail_map.inputs[0])
 
     return shader_group
-
-
-def build_blender_materials(mod, model_name, textures):
-    materials = []
-    if not bpy.data.node_groups.get("MT Framework shader"):
-        _create_shader_node_group()
-
-    for i, material in enumerate(mod.materials_data_array):
-        blender_material = bpy.data.materials.new("{}_{}".format(model_name, str(i).zfill(2)))
-        blender_material.use_nodes = True
-        blender_material.blend_method = (
-            "CLIP"  # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
-        )
-        node_to_delete = blender_material.node_tree.nodes.get("Principled BSDF")
-        blender_material.node_tree.nodes.remove(node_to_delete)
-        # principled_node.inputs['Specular'].default_value = 0.2 # change specular
-        shader_node_group = blender_material.node_tree.nodes.new("ShaderNodeGroup")
-        shader_node_group.node_tree = bpy.data.node_groups["MT Framework shader"]
-        shader_node_group.name = "MTFrameworkGroup"
-        shader_node_group.width = 300
-        material_output = blender_material.node_tree.nodes.get("Material Output")
-        material_output.location = (400, 0)
-
-        link = blender_material.node_tree.links.new
-        link(shader_node_group.outputs[0], material_output.inputs[0])
-        materials.append(blender_material)
-
-        for texture_code, tex_index in enumerate(material.texture_indices):
-            if not tex_index:
-                continue
-            try:
-                texture_target = textures[tex_index]
-            except IndexError:
-                # TODO
-                print("tex_index {} not found. Texture len(): {}".format(tex_index, len(textures)))
-                continue
-            if not texture_target:
-                # This means the conversion failed before
-                # TODO: logging
-                continue
-            if texture_code == 6:
-                print("texture_code not supported", texture_code)
-                continue
-            texture_node = blender_material.node_tree.nodes.new("ShaderNodeTexImage")
-            texture_code_to_blender_texture(texture_code, texture_node, blender_material)
-            texture_node.image = (
-                texture_target.image
-            )  # set bpy.data.textures[].image as a texures for ShaderNodeTexImage
-            if (
-                texture_code == 1 or texture_code == 7
-            ):  # change color settings for normal and detail maps
-                texture_node.image.colorspace_settings.name = "Non-Color"
-
-    return materials
-
-
-def _get_path_to_albam():
-    for mod in addon_utils.modules():
-        if mod.bl_info["name"] == "Albam Reloaded":
-            filepath = mod.__file__
-            path = os.path.split(filepath)[0]
-            return path
-        else:
-            pass
 
 
 def texture_code_to_blender_texture(texture_code, blender_texture_node, blender_material):
