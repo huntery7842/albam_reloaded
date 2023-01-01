@@ -1,378 +1,419 @@
-from ctypes import (
-    Structure,
-    LittleEndianStructure,
-    c_uint,
-    c_uint8,
-    c_uint16,
-    c_float,
-    c_char,
-    c_short,
-    c_ushort,
-    c_byte,
-    c_ubyte,
-)
+# This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from albam_reloaded.lib.structure import DynamicStructure
+from pkg_resources import parse_version
+import kaitaistruct
+from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 
 
-def unk_data_depends_on_other_unk(tmp_struct):
-    if tmp_struct.unk_08:
-        return c_ubyte * (tmp_struct.bones_array_offset - 176)
-    else:
-        return c_ubyte * 0
+if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+    raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
+
+class Mod156(KaitaiStruct):
+    def __init__(self, _io, _parent=None, _root=None):
+        self._io = _io
+        self._parent = _parent
+        self._root = _root if _root else self
+        self._read()
+
+    def _read(self):
+        self.header = Mod156.ModHeader(self._io, self, self._root)
+        self.bones = [None] * (self.header.num_bones)
+        for i in range(self.header.num_bones):
+            self.bones[i] = Mod156.Bone(self._io, self, self._root)
+
+        self.bones_matrix_1 = [None] * (self.header.num_bones)
+        for i in range(self.header.num_bones):
+            self.bones_matrix_1[i] = Mod156.Matrix4x4(self._io, self, self._root)
+
+        self.bones_matrix_world = [None] * (self.header.num_bones)
+        for i in range(self.header.num_bones):
+            self.bones_matrix_world[i] = Mod156.Matrix4x4(self._io, self, self._root)
+
+        if self.header.num_bones != 0:
+            self.bone_map = self._io.read_bytes(256)
+
+        self.bones_mapping = [None] * (self.header.num_bone_mappings)
+        for i in range(self.header.num_bone_mappings):
+            self.bones_mapping[i] = Mod156.BoneMapping(self._io, self, self._root)
+
+        self.groups = [None] * (self.header.num_groups)
+        for i in range(self.header.num_groups):
+            self.groups[i] = Mod156.Group(self._io, self, self._root)
+
+        self.textures = [None] * (self.header.num_textures)
+        for i in range(self.header.num_textures):
+            self.textures[i] = (KaitaiStream.bytes_terminate(self._io.read_bytes(64), 0, False)).decode(u"ascii")
+
+        self.materials = [None] * (self.header.num_materials)
+        for i in range(self.header.num_materials):
+            self.materials[i] = Mod156.Material(self._io, self, self._root)
+
+        self.meshes = [None] * (self.header.num_meshes)
+        for i in range(self.header.num_meshes):
+            self.meshes[i] = Mod156.Mesh(self._io, self, self._root)
+
+        self.num_weight_bounds = self._io.read_u4le()
+        self.weight_bounds = [None] * (self.num_weight_bounds)
+        for i in range(self.num_weight_bounds):
+            self.weight_bounds[i] = Mod156.WeightBound(self._io, self, self._root)
+
+        self.vertex_buffer = self._io.read_bytes(self.header.size_vertex_buffer)
+        self.vertex_buffer_2 = self._io.read_bytes(self.header.size_vertex_buffer_2)
+        self.index_buffer = self._io.read_bytes(((self.header.num_faces * 2) - 2))
+
+    class Vec4(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.x = self._io.read_f4le()
+            self.y = self._io.read_f4le()
+            self.z = self._io.read_f4le()
+            self.w = self._io.read_f4le()
 
 
-class Mod156(DynamicStructure):
-    _fields_ = (
-        ("id_magic", c_char * 4),
-        ("version", c_ubyte),
-        ("version_rev", c_byte),
-        ("bone_count", c_ushort),
-        ("mesh_count", c_short),
-        ("material_count", c_ushort),
-        ("vertex_count", c_uint),
-        ("face_count", c_uint),
-        ("edge_count", c_uint),
-        ("vertex_buffer_size", c_uint),
-        ("vertex_buffer_2_size", c_uint),
-        ("texture_count", c_uint),
-        ("group_count", c_uint),
-        ("bone_palette_count", c_uint),
-        ("bones_array_offset", c_uint),
-        ("group_offset", c_uint),
-        ("textures_array_offset", c_uint),
-        ("meshes_array_offset", c_uint),
-        ("vertex_buffer_offset", c_uint),
-        ("vertex_buffer_2_offset", c_uint),
-        ("index_buffer_offset", c_uint),
-        ("reserved_01", c_uint),
-        ("reserved_02", c_uint),
-        ("sphere_x", c_float),
-        ("sphere_y", c_float),
-        ("sphere_z", c_float),
-        ("sphere_w", c_float),
-        ("box_min_x", c_float),
-        ("box_min_y", c_float),
-        ("box_min_z", c_float),
-        ("box_min_w", c_float),
-        ("box_max_x", c_float),
-        ("box_max_y", c_float),
-        ("box_max_z", c_float),
-        ("box_max_w", c_float),
-        ("unk_01", c_uint),
-        ("unk_02", c_uint),
-        ("unk_03", c_uint),
-        ("unk_04", c_uint),
-        ("unk_05", c_uint),
-        ("unk_06", c_uint),
-        ("unk_07", c_uint),
-        ("unk_08", c_uint),
-        ("unk_09", c_uint),
-        ("unk_10", c_uint),
-        ("unk_11", c_uint),
-        ("reserved_03", c_uint),
-        ("unk_12", unk_data_depends_on_other_unk),
-        ("bones_array", lambda s: Bone * s.bone_count),
-        ("bones_unk_matrix_array", lambda s: (c_float * 16) * s.bone_count),
-        ("bones_world_transform_matrix_array", lambda s: (c_float * 16) * s.bone_count),
-        (
-            "bones_animation_mapping",
-            lambda s: (c_ubyte * 256) if s.bone_palette_count else c_ubyte * 0,
-        ),
-        ("bone_palette_array", lambda s: BonePalette * s.bone_palette_count),
-        ("group_data_array", lambda s: GroupData * s.group_count),
-        ("textures_array", lambda s: (c_char * 64) * s.texture_count),
-        ("materials_data_array", lambda s: MaterialData * s.material_count),
-        ("meshes_array", lambda s: Mesh156 * s.mesh_count),
-        ("num_weight_bounds", c_uint),
-        ("weight_bounds", lambda s: WeightBound * s.num_weight_bounds),
-        ("vertex_buffer", lambda s: c_ubyte * s.vertex_buffer_size),
-        ("vertex_buffer_2", lambda s: c_ubyte * s.vertex_buffer_2_size),
-        # TODO: investigate the padding
-        ("index_buffer", lambda s: c_ushort * (s.face_count - 1)),
-    )
+    class ModHeader(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.ident = self._io.read_bytes(4)
+            if not self.ident == b"\x4D\x4F\x44\x00":
+                raise kaitaistruct.ValidationNotEqualError(b"\x4D\x4F\x44\x00", self.ident, self._io, u"/types/mod_header/seq/0")
+            self.version = self._io.read_u1()
+            self.revision = self._io.read_u1()
+            self.num_bones = self._io.read_u2le()
+            self.num_meshes = self._io.read_u2le()
+            self.num_materials = self._io.read_u2le()
+            self.num_vertices = self._io.read_u4le()
+            self.num_faces = self._io.read_u4le()
+            self.num_edges = self._io.read_u4le()
+            self.size_vertex_buffer = self._io.read_u4le()
+            self.size_vertex_buffer_2 = self._io.read_u4le()
+            self.num_textures = self._io.read_u4le()
+            self.num_groups = self._io.read_u4le()
+            self.num_bone_mappings = self._io.read_u4le()
+            self.offset_bones = self._io.read_u4le()
+            self.offset_groups = self._io.read_u4le()
+            self.offset_textures = self._io.read_u4le()
+            self.offset_meshes = self._io.read_u4le()
+            self.offset_buffer_vertices = self._io.read_u4le()
+            self.offset_buffer_vertices_2 = self._io.read_u4le()
+            self.offset_buffer_indices = self._io.read_u4le()
+            self.reserved_01 = self._io.read_u4le()
+            self.reserved_02 = self._io.read_u4le()
+            self.bsphere = Mod156.Vec4(self._io, self, self._root)
+            self.bbox_min = Mod156.Vec4(self._io, self, self._root)
+            self.bbox_max = Mod156.Vec4(self._io, self, self._root)
+            self.unk_01 = self._io.read_u4le()
+            self.unk_02 = self._io.read_u4le()
+            self.unk_03 = self._io.read_u4le()
+            self.unk_04 = self._io.read_u4le()
+            self.unk_05 = self._io.read_u4le()
+            self.unk_06 = self._io.read_u4le()
+            self.unk_07 = self._io.read_u4le()
+            self.unk_08 = self._io.read_u4le()
+            self.unk_09 = self._io.read_u4le()
+            self.unk_10 = self._io.read_u4le()
+            self.unk_11 = self._io.read_u4le()
+            self.reserved_03 = self._io.read_u4le()
+            if self.unk_08 != 0:
+                self.unk_12 = self._io.read_bytes((self.offset_bones - 176))
 
 
-class Bone(Structure):
-    _fields_ = (
-        ("anim_map_index", c_ubyte),
-        ("parent_index", c_ubyte),  # 255: root
-        ("mirror_index", c_ubyte),
-        ("palette_index", c_ubyte),
-        ("unk_01", c_float),
-        ("parent_distance", c_float),
-        # Relative to the parent bone
-        ("location_x", c_float),
-        ("location_y", c_float),
-        ("location_z", c_float),
-    )
+
+    class Vertex(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.position = Mod156.Vec4S2(self._io, self, self._root)
+            self.bone_indices = [None] * (4)
+            for i in range(4):
+                self.bone_indices[i] = self._io.read_u1()
+
+            self.weight_values = [None] * (4)
+            for i in range(4):
+                self.weight_values[i] = self._io.read_u1()
+
+            self.normal = Mod156.Vec4U1(self._io, self, self._root)
+            self.tangent = Mod156.Vec4U1(self._io, self, self._root)
+            self.uv = Mod156.Vec2U2(self._io, self, self._root)
+            self.uv2 = Mod156.Vec2U2(self._io, self, self._root)
 
 
-class BonePalette(Structure):
-    _fields_ = (
-        ("unk_01", c_uint),
-        ("values", c_ubyte * 32),
-    )
+    class Matrix4x4(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-    _comments_ = {
-        # TODO: verify
-        "unk_01": "Seems to be the count of meaninful values out of the 32 bytes"
-    }
-
-
-class GroupData(Structure):
-    _fields_ = (
-        ("group_index", c_uint),
-        ("unk_02", c_float),
-        ("unk_03", c_float),
-        ("unk_04", c_float),
-        ("unk_05", c_float),
-        ("unk_06", c_float),
-        ("unk_07", c_float),
-        ("unk_08", c_float),
-    )
-    _comments_ = {"group_index": "In ~25% of all RE5 mods, this value doesn't match the index"}
+        def _read(self):
+            self.row_1 = Mod156.Vec4(self._io, self, self._root)
+            self.row_2 = Mod156.Vec4(self._io, self, self._root)
+            self.row_3 = Mod156.Vec4(self._io, self, self._root)
+            self.row_4 = Mod156.Vec4(self._io, self, self._root)
 
 
-class MaterialData(Structure):
-    _fields_ = (
-        ("unk_01_flag_01", c_uint16, 1),  # previously c_ushort
-        ("unk_01_flag_02", c_uint16, 1),
-        ("unk_01_flag_03", c_uint16, 1),
-        ("unk_01_flag_04", c_uint16, 1),
-        ("unk_01_flag_05", c_uint16, 1),
-        ("unk_01_flag_06", c_uint16, 1),
-        ("unk_01_no_alpha", c_uint16, 1),
-        ("unk_01_flag_08", c_uint16, 1),
-        ("unk_01_alpha_transparency", c_uint16, 1),
-        ("unk_01_flag_10", c_uint16, 1),
-        ("unk_01_flag_11", c_uint16, 1),
-        ("unk_01_flag_12", c_uint16, 1),
-        ("unk_01_flag_13", c_uint16, 1),
-        ("unk_01_flag_14", c_uint16, 1),
-        ("unk_01_flag_15", c_uint16, 1),
-        ("unk_01_flag_16", c_uint16, 1),
-        ("unk_flag_01", c_uint16, 1),
-        ("unk_flag_02", c_uint16, 1),
-        ("unk_flag_03", c_uint16, 1),
-        ("unk_flag_04", c_uint16, 1),
-        ("unk_flag_05", c_uint16, 1),
-        ("unk_flag_06", c_uint16, 1),
-        ("unk_flag_07", c_uint16, 1),
-        ("unk_flag_08", c_uint16, 1),
-        ("unk_flag_09", c_uint16, 1),
-        ("unk_flag_10", c_uint16, 1),
-        ("unk_flag_11", c_uint16, 1),
-        # Always set to zero since 8 bones is not yet supported
-        ("flag_8_bones_vertex", c_uint16, 1),
-        ("unk_flag_12", c_uint16, 1),
-        ("unk_flag_13", c_uint16, 1),
-        ("unk_flag_14", c_uint16, 1),
-        ("unk_flag_15", c_uint16, 1),
-        ("unk_02_flag_01", c_uint16, 1),  # 'unk_02', c_short
-        ("unk_02_flag_02", c_uint16, 1),
-        ("unk_02_flag_03", c_uint16, 1),
-        ("unk_02_flag_04", c_uint16, 1),
-        ("unk_02_flag_05", c_uint16, 1),
-        ("unk_02_flag_06", c_uint16, 1),
-        ("unk_02_flag_07", c_uint16, 1),
-        ("unk_02_do_not_use_AM_as_emmisive", c_uint16, 1),
-        ("unk_02_use_AM_as_emmisive", c_uint16, 1),
-        ("unk_02_flag_10", c_uint16, 1),
-        ("unk_02_do_not_use_detail_map", c_uint16, 1),
-        ("unk_02_use_detail_map", c_uint16, 1),
-        ("unk_02_flag_13", c_uint16, 1),
-        ("unk_02_flag_14", c_uint16, 1),
-        ("unk_02_flag_15", c_uint16, 1),
-        ("unk_02_flag_16", c_uint16, 1),
-        ("unk_03", c_short),
-        ("unk_04", c_ushort),
-        ("unk_05", c_ushort),
-        ("unk_06", c_ushort),
-        ("unk_07", c_ushort),
-        ("unk_08", c_ushort),
-        ("unk_09", c_ushort),
-        ("unk_10", c_ushort),  # 0 or 65535
-        ("unk_11", c_ushort),  # 0 or 65535
-        ("texture_indices", c_uint * 8),
-        ("unk_f_01", c_float),
-        ("unk_f_02", c_float),
-        ("unk_f_03", c_float),  # specular power ? 0.0 - 0.04
-        ("unk_f_04", c_float),  # glossnes level ?
-        ("unk_f_05", c_float),  # specular contrast ? 1.0 - 250
-        ("unk_f_06", c_float),
-        ("unk_f_07", c_float),
-        ("unk_f_08", c_float),
-        ("unk_f_09", c_float),
-        ("unk_f_10", c_float),
-        ("unk_f_11", c_float),
-        ("unk_detail_factor", c_float),
-        ("unk_f_13", c_float),
-        ("unk_f_14", c_float),
-        ("unk_f_15", c_float),
-        ("unk_f_16", c_float),
-        ("unk_f_17", c_float),
-        ("unk_f_18", c_float),
-        ("unk_f_19", c_float),
-        ("unk_f_20", c_float),
-        ("unk_normalmap_green_channel", c_float),  # -1 or 1
-        ("unk_f_22", c_float),
-        ("unk_f_23", c_float),
-        ("unk_f_24", c_float),
-        ("unk_f_25", c_float),
-        ("unk_f_26", c_float),
-    )
+    class Bone(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.idx_anim_map = self._io.read_u1()
+            self.idx_parent = self._io.read_u1()
+            self.idx_mirror = self._io.read_u1()
+            self.idx_mapping = self._io.read_u1()
+            self.unk_01 = self._io.read_f4le()
+            self.parent_distance = self._io.read_f4le()
+            self.location = Mod156.Vec3(self._io, self, self._root)
 
 
-class WeightBound(Structure):
-    _fields_ = (
-        ("bone_id", c_uint),
-        ("unk_01", c_float * 3),
-        ("bsphere", c_float * 4),
-        ("bbox_min", c_float * 4),
-        ("bbox_max", c_float * 4),
-        ("oabb_matrix", c_float * 16),
-        ("oabb_dimension", c_float * 4),
-    )
+    class Vertex0(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.position = Mod156.Vec3(self._io, self, self._root)
+            self.normal = Mod156.Vec4U1(self._io, self, self._root)
+            self.tangent = Mod156.Vec4U1(self._io, self, self._root)
+            self.uv = Mod156.Vec2U2(self._io, self, self._root)
+            self.uv2 = Mod156.Vec2U2(self._io, self, self._root)
+            self.uv3 = Mod156.Vec2U2(self._io, self, self._root)
 
 
-class Mesh156(LittleEndianStructure):
-    _fields_ = (
-        ("unk_render_group_index", c_ushort),
-        ("material_index", c_ushort),
-        ("constant", c_ubyte),  # always 1
-        ("level_of_detail", c_ubyte),
-        ("unk_01", c_ubyte),
-        ("vertex_format", c_ubyte),
-        ("vertex_stride", c_ubyte),
-        ("unk_02", c_ubyte),
-        ("unk_03", c_ubyte),
-        ("unk_flag_01", c_uint8, 1),
-        ("unk_flag_02", c_uint8, 1),
-        ("unk_flag_03", c_uint8, 1),
-        ("unk_flag_04", c_uint8, 1),
-        ("unk_flag_05", c_uint8, 1),
-        ("use_cast_shadows", c_uint8, 1),
-        ("unk_flag_06", c_uint8, 1),
-        ("unk_flag_07", c_uint8, 1),
-        ("vertex_count", c_ushort),
-        ("vertex_index_end", c_ushort),
-        ("vertex_index_start_1", c_uint),
-        ("vertex_offset", c_uint),
-        ("unk_05", c_uint),
-        ("face_position", c_uint),
-        ("face_count", c_uint),
-        ("face_offset", c_uint),
-        ("unk_06", c_ubyte),
-        ("unk_07", c_ubyte),
-        ("vertex_index_start_2", c_ushort),
-        ("vertex_group_count", c_ubyte),
-        ("bone_palette_index", c_ubyte),
-        ("unk_08", c_ubyte),
-        ("unk_09", c_ubyte),
-        ("unk_10", c_ushort),
-        ("unk_11", c_ushort),
-    )
+    class Vec2U2(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.u = self._io.read_u2le()
+            self.v = self._io.read_u2le()
 
 
-class VertexFormat0(Structure):
-    _fields_ = (
-        ("position_x", c_float),
-        ("position_y", c_float),
-        ("position_z", c_float),
-        ("normal_x", c_ubyte),
-        ("normal_y", c_ubyte),
-        ("normal_z", c_ubyte),
-        ("normal_w", c_ubyte),
-        ("tangent_x", c_ubyte),
-        ("tangent_y", c_ubyte),
-        ("tangent_z", c_ubyte),
-        ("tangent_w", c_ubyte),
-        ("uv_x", c_ushort),  # half float
-        ("uv_y", c_ushort),  # half float
-        ("uv2_x", c_ushort),  # half float
-        ("uv2_y", c_ushort),  # half float
-        ("uv3_x", c_ushort),  # half float
-        ("uv3_y", c_ushort),  # half float
-    )
+    class Vec4U1(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.x = self._io.read_u1()
+            self.y = self._io.read_u1()
+            self.z = self._io.read_u1()
+            self.w = self._io.read_u1()
 
 
-class VertexFormat(Structure):
-    # http://forum.xentax.com/viewtopic.php?f=10&t=3057&start=165
-    _fields_ = (
-        ("position_x", c_short),
-        ("position_y", c_short),
-        ("position_z", c_short),
-        ("position_w", c_short),
-        ("bone_indices", c_ubyte * 4),
-        ("weight_values", c_ubyte * 4),
-        ("normal_x", c_ubyte),
-        ("normal_y", c_ubyte),
-        ("normal_z", c_ubyte),
-        ("normal_w", c_ubyte),
-        ("tangent_x", c_ubyte),
-        ("tangent_y", c_ubyte),
-        ("tangent_z", c_ubyte),
-        ("tangent_w", c_ubyte),
-        ("uv_x", c_ushort),  # half float
-        ("uv_y", c_ushort),  # half float
-        ("uv2_x", c_ushort),  # half float
-        ("uv2_y", c_ushort),  # half float
-    )
+    class Mesh(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.idx_group = self._io.read_u2le()
+            self.idx_material = self._io.read_u2le()
+            self.constant = self._io.read_u1()
+            self.level_of_detail = self._io.read_u1()
+            self.unk_01 = self._io.read_u1()
+            self.vertex_fmt = self._io.read_u1()
+            self.vertex_stride = self._io.read_u1()
+            self.vertex_stride_2 = self._io.read_u1()
+            self.unk_03 = self._io.read_u1()
+            self.unk_flags = self._io.read_u1()
+            self.num_vertices = self._io.read_u2le()
+            self.vertex_index_end = self._io.read_u2le()
+            self.vertex_index_start_1 = self._io.read_u4le()
+            self.vertex_offset = self._io.read_u4le()
+            self.unk_05 = self._io.read_u4le()
+            self.face_position = self._io.read_u4le()
+            self.face_count = self._io.read_u4le()
+            self.face_offset = self._io.read_u4le()
+            self.unk_06 = self._io.read_u1()
+            self.unk_07 = self._io.read_u1()
+            self.vertex_index_start_2 = self._io.read_u2le()
+            self.vertex_group_count = self._io.read_u1()
+            self.bone_map_index = self._io.read_u1()
+            self.unk_08 = self._io.read_u1()
+            self.unk_09 = self._io.read_u1()
+            self.unk_10 = self._io.read_u2le()
+            self.unk_11 = self._io.read_u2le()
+
+        @property
+        def vertices(self):
+            if hasattr(self, '_m_vertices'):
+                return self._m_vertices if hasattr(self, '_m_vertices') else None
+
+            _pos = self._io.pos()
+            self._io.seek(((self._root.header.offset_buffer_vertices + (self.vertex_index_start_2 * self.vertex_stride)) + self.vertex_offset))
+            self._m_vertices = [None] * (self.num_vertices)
+            for i in range(self.num_vertices):
+                _on = self.vertex_fmt
+                if _on == 0:
+                    self._m_vertices[i] = Mod156.Vertex0(self._io, self, self._root)
+                elif _on == 4:
+                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                elif _on == 6:
+                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                elif _on == 7:
+                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                elif _on == 1:
+                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                elif _on == 3:
+                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                elif _on == 5:
+                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                elif _on == 8:
+                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                elif _on == 2:
+                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+
+            self._io.seek(_pos)
+            return self._m_vertices if hasattr(self, '_m_vertices') else None
 
 
-class VertexFormat2(VertexFormat):
-    pass
+    class Material(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.unk_01 = self._io.read_u2le()
+            self.unk_flags = self._io.read_u2le()
+            self.unk_shorts = [None] * (10)
+            for i in range(10):
+                self.unk_shorts[i] = self._io.read_u2le()
+
+            self.texture_slot_diffuse = self._io.read_u4le()
+            self.texture_slot_normal = self._io.read_u4le()
+            self.texture_slot_specular = self._io.read_u4le()
+            self.texture_slot_lightmap = self._io.read_u4le()
+            self.texture_slot_unk_01 = self._io.read_u4le()
+            self.texture_slot_alphamap = self._io.read_u4le()
+            self.texture_slot_envmap = self._io.read_u4le()
+            self.texture_slot_normal_detail = self._io.read_u4le()
+            self.unk_floats = [None] * (26)
+            for i in range(26):
+                self.unk_floats[i] = self._io.read_f4le()
 
 
-class VertexFormat3(VertexFormat):
-    pass
+
+    class WeightBound(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.bone_id = self._io.read_u4le()
+            self.unk_01 = Mod156.Vec3(self._io, self, self._root)
+            self.bsphere = Mod156.Vec4(self._io, self, self._root)
+            self.bbox_min = Mod156.Vec4(self._io, self, self._root)
+            self.bbox_max = Mod156.Vec4(self._io, self, self._root)
+            self.oabb = Mod156.Matrix4x4(self._io, self, self._root)
+            self.oabb_dimension = Mod156.Vec4(self._io, self, self._root)
 
 
-class VertexFormat4(VertexFormat):
-    pass
+    class Vec3(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.x = self._io.read_f4le()
+            self.y = self._io.read_f4le()
+            self.z = self._io.read_f4le()
 
 
-class VertexFormat5(Structure):
-    _fields_ = (
-        ("position_x", c_short),
-        ("position_y", c_short),
-        ("position_z", c_short),
-        ("position_w", c_short),
-        ("bone_indices", c_ubyte * 8),
-        ("weight_values", c_ubyte * 8),
-        ("normal_x", c_ubyte),
-        ("normal_y", c_ubyte),
-        ("normal_z", c_ubyte),
-        ("normal_w", c_ubyte),
-        ("uv_x", c_ushort),  # half float
-        ("uv_y", c_ushort),  # half float
-    )
+    class Vec4S2(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.x = self._io.read_s2le()
+            self.y = self._io.read_s2le()
+            self.z = self._io.read_s2le()
+            self.w = self._io.read_s2le()
 
 
-class VertexFormat6(VertexFormat5):
-    pass
+    class Group(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.group_index = self._io.read_u4le()
+            self.unk_02 = self._io.read_f4le()
+            self.unk_03 = self._io.read_f4le()
+            self.unk_04 = self._io.read_f4le()
+            self.unk_05 = self._io.read_f4le()
+            self.unk_06 = self._io.read_f4le()
+            self.unk_07 = self._io.read_f4le()
+            self.unk_08 = self._io.read_f4le()
 
 
-class VertexFormat7(VertexFormat5):
-    pass
+    class BoneMapping(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.unk_01 = self._io.read_u4le()
+            self.indices = self._io.read_bytes(32)
 
 
-class VertexFormat8(VertexFormat5):
-    pass
+    class Vertex5(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.position = Mod156.Vec4S2(self._io, self, self._root)
+            self.bone_indices = [None] * (8)
+            for i in range(8):
+                self.bone_indices[i] = self._io.read_u1()
+
+            self.weight_values = [None] * (8)
+            for i in range(8):
+                self.weight_values[i] = self._io.read_u1()
+
+            self.normal = Mod156.Vec4U1(self._io, self, self._root)
+            self.uv = Mod156.Vec2U2(self._io, self, self._root)
 
 
-VERTEX_FORMATS_TO_CLASSES = {
-    0: VertexFormat0,
-    1: VertexFormat,
-    2: VertexFormat2,
-    3: VertexFormat3,
-    4: VertexFormat4,
-    5: VertexFormat5,
-    6: VertexFormat6,
-    7: VertexFormat7,
-    8: VertexFormat8,
-}
 
-
-CLASSES_TO_VERTEX_FORMATS = {v: k for k, v in VERTEX_FORMATS_TO_CLASSES.items()}

@@ -4,10 +4,11 @@ from pathlib import PureWindowsPath
 
 import addon_utils
 import bpy
+from kaitaistruct import KaitaiStream
 
-from albam_reloaded.exceptions import TextureError
-from . import Tex112
-from .structs.arc import EXTENSION_TO_FILE_ID
+from albam_reloaded.image_formats.dds import DDSHeader
+from . import EXTENSION_TO_FILE_ID
+from .structs.tex_112 import Tex112
 
 
 def build_blender_materials(arc, mod, name_prefix="material"):
@@ -18,7 +19,7 @@ def build_blender_materials(arc, mod, name_prefix="material"):
     if not bpy.data.node_groups.get("MT Framework shader"):
         _create_shader_node_group()
 
-    for i, material in enumerate(mod.materials_data_array):
+    for i, material in enumerate(mod.materials):
         blender_material = bpy.data.materials.new(f"{name_prefix}_{str(i).zfill(2)}")
         blender_material.use_nodes = True
         # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
@@ -37,8 +38,19 @@ def build_blender_materials(arc, mod, name_prefix="material"):
         link(shader_node_group.outputs[0], material_output.inputs[0])
         materials.append(blender_material)
 
-        for texture_code, tex_index in enumerate(material.texture_indices):
-            if not tex_index:
+        texture_slots = [
+            'texture_slot_diffuse',
+            'texture_slot_normal',
+            'texture_slot_specular',
+            'texture_slot_lightmap',
+            'texture_slot_unk_01',
+            'texture_slot_alphamap',
+            'texture_slot_envmap',
+            'texture_slot_normal_detail',
+        ]
+        for texture_code, slot_name in enumerate(texture_slots, start=1):
+            tex_index = getattr(material, slot_name, 0)
+            if tex_index == 0:
                 continue
             try:
                 texture_target = textures[tex_index]
@@ -55,7 +67,7 @@ def build_blender_materials(arc, mod, name_prefix="material"):
             texture_code_to_blender_texture(texture_code, texture_node, blender_material)
             texture_node.image = texture_target
             # change color settings for normal and detail maps
-            if texture_code == 1 or texture_code == 7:
+            if texture_code == 2 or texture_code == 8:
                 texture_node.image.colorspace_settings.name = "Non-Color"
 
     return materials
@@ -75,28 +87,36 @@ def build_blender_textures(arc, mod):
     textures = [None]  # materials refer to textures in index-1
     tex_type = EXTENSION_TO_FILE_ID['tex']
 
-    for i, raw_texture_path in enumerate(mod.textures_array):
-        texture_path = raw_texture_path[:].partition(b'\x00')[0]
+    for i, raw_texture_path in enumerate(mod.textures):
+        # TODO: raw_texture path in bytes?
+        texture_path = raw_texture_path.partition('\x00')[0]
         tex_buffer = arc.get_file(texture_path, tex_type)
         if not tex_buffer:
             print(f'texture_path {texture_path} not found in arc')
             # TODO: handle missing texture
             continue
 
-        tex = Tex112(file_path=io.BytesIO(tex_buffer))
+        tex = Tex112(KaitaiStream(io.BytesIO(tex_buffer)))
         try:
-            dds = tex.to_dds()
-        except TextureError as err:
+            dds_header = DDSHeader(
+                dwHeight=tex.height,
+                dwWidth=tex.width,
+                dwMipMapCount=tex.num_mipmaps,
+                pixelfmt_dwFourCC=tex.format.encode(),
+            )
+            dds_header.set_constants()
+            dds_header.set_variables()
+            dds = bytes(dds_header) + tex.dds_data
+        except Exception as err:
             # TODO: log this instead of printing it
             print(f'Error converting "{texture_path}" to dds: {err}')
             textures.append(None)
             continue
 
-        tex_name = PureWindowsPath(texture_path.decode()).name
+        tex_name = PureWindowsPath(texture_path).name
         bl_image = bpy.data.images.new(f'{tex_name}.dds', tex.width, tex.height)
         bl_image.source = 'FILE'
-        dds_bytes = bytes(dds)
-        bl_image.pack(data=dds_bytes, data_len=len(dds_bytes))
+        bl_image.pack(data=dds, data_len=len(dds))
         textures.append(bl_image)
 
     return textures
@@ -309,24 +329,24 @@ def texture_code_to_blender_texture(texture_code, blender_texture_node, blender_
     shader_node_grp = blender_material.node_tree.nodes.get("MTFrameworkGroup")
     link = blender_material.node_tree.links.new
 
-    if texture_code == 0:
+    if texture_code == 1:
         # Diffuse _BM
         link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[0])
         link(blender_texture_node.outputs["Alpha"], shader_node_grp.inputs[1])
         blender_texture_node.location = (-300, 350)
         # blender_texture_node.use_map_color_diffuse = True
-    elif texture_code == 1:
+    elif texture_code == 2:
         # Normal _NM
         blender_texture_node.location = (-300, 0)
         link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[2])
         link(blender_texture_node.outputs["Alpha"], shader_node_grp.inputs[3])
 
-    elif texture_code == 2:
+    elif texture_code == 3:
         # Specular _MM
         blender_texture_node.location = (-300, -350)
         link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[4])
 
-    elif texture_code == 3:
+    elif texture_code == 4:
         # Lightmap _LM
         blender_texture_node.location = (-300, -700)
         uv_map_node = blender_material.node_tree.nodes.new("ShaderNodeUVMap")
@@ -336,17 +356,17 @@ def texture_code_to_blender_texture(texture_code, blender_texture_node, blender_
         link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[5])
         shader_node_grp.inputs[6].default_value = 1
 
-    elif texture_code == 4:
+    elif texture_code == 5:
         # Emissive mask ?
         blender_texture_node.location = (-300, -1050)
 
-    elif texture_code == 5:
+    elif texture_code == 6:
         # Alpha mask _AM
         blender_texture_node.location = (-300, -1400)
         link(blender_texture_node.outputs["Color"], shader_node_grp.inputs[7])
         shader_node_grp.inputs[8].default_value = 1
 
-    elif texture_code == 7:
+    elif texture_code == 8:
         # Detail normal map
         blender_texture_node.location = (-300, -1750)
         tex_coord_node = blender_material.node_tree.nodes.new("ShaderNodeTexCoord")
@@ -372,7 +392,7 @@ def texture_code_to_blender_texture(texture_code, blender_texture_node, blender_
             d.driver.expression = var1.name
     else:
         print("texture_code not supported", texture_code)
-        # TODO: 6 CM cubemap
+        # TODO: 7 CM cubemap
 
 
 def blender_texture_to_texture_code(blender_texture_image_node):

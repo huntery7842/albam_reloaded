@@ -1,4 +1,6 @@
 import importlib
+import os
+import sys
 
 import bpy
 
@@ -17,8 +19,12 @@ bl_info = {
     "category": "Import-Export",
 }
 
+ALBAM_DIR = os.path.dirname(__file__)
+VENDOR_DIR = os.path.join(ALBAM_DIR, 'albam_vendor')
+
 
 def register():
+    sys.path.insert(0, VENDOR_DIR)
     # Load registered functions into the blender_registry
     importlib.import_module("albam_reloaded.engines.mtframework.archive")
     for cls in classes_to_register:
@@ -29,6 +35,7 @@ def register():
 def unregister():
     for cls in reversed(classes_to_register):
         bpy.utils.unregister_class(cls)
+    sys.path.remove(VENDOR_DIR)
 
 
 if __name__ == "__main__":
