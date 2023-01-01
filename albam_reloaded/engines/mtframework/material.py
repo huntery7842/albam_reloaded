@@ -6,7 +6,7 @@ import addon_utils
 import bpy
 from kaitaistruct import KaitaiStream
 
-from albam_reloaded.image_formats.dds import DDSHeader
+from albam_reloaded.lib.dds import DDSHeader
 from . import EXTENSION_TO_FILE_ID
 from .structs.tex_112 import Tex112
 
