@@ -9,7 +9,7 @@ from mathutils import Matrix, Vector
 
 from albam_reloaded.lib.blender import strip_triangles_to_triangles_list
 from albam_reloaded.lib.misc import chunks
-from . import BONE_INDEX_TO_GROUP, EXTENSION_TO_FILE_ID
+from . import EXTENSION_TO_FILE_ID
 from .material import build_blender_materials
 from .structs.mod_156 import Mod156
 
@@ -215,91 +215,7 @@ def build_blender_armature(mod, bl_object_parent):
     bpy.ops.object.mode_set(mode="OBJECT")
     assert len(armature.bones) == len(mod.bones)
 
-    _create_bone_groups(armature_ob, mod)
     return armature_ob
-
-
-def _create_bone_groups(armature_ob, mod):
-    bone_groups_cache = {
-        "BONE_GROUP_MAIN": {
-            "color_set": "THEME03",
-            "name": "Main",
-            "layer": 1,
-        },
-        "BONE_GROUP_ARMS": {
-            "color_set": "THEME02",
-            "name": "Arms",
-            "layer": 2,
-        },
-        "BONE_GROUP_LEGS": {
-            "color_set": "THEME05",
-            "name": "Legs",
-            "layer": 3,
-        },
-        "BONE_GROUP_HANDS": {
-            "color_set": "THEME06",
-            "name": "Hands",
-            "layer": 4,
-        },
-        "BONE_GROUP_HAIR": {
-            "color_set": "THEME07",
-            "name": "Hair",
-            "layer": 5,
-        },
-        "BONE_GROUP_FACIAL_BASIC": {
-            "color_set": "THEME02",
-            "name": "Facial Basic",
-            "layer": 6,
-        },
-        "BONE_GROUP_FACIAL": {
-            "color_set": "THEME01",
-            "name": "Facial",
-            "layer": 7,
-        },
-        "BONE_GROUP_ACCESORIES": {
-            "color_set": "THEME14",
-            "name": "Accessories",
-            "layer": 8,
-        },
-        "OTHER": {
-            "color_set": "THEME20",
-            "name": "Other",
-            "layer": 9,
-        },
-    }
-
-    bpy.ops.object.mode_set(mode="POSE")
-    for i, bone in enumerate(armature_ob.pose.bones):
-        source_bone = mod.bones[i]
-        anim_index = source_bone.idx_anim_map
-        bone.bone_group = _get_or_create_bone_group(anim_index, armature_ob, i, bone_groups_cache)
-    bpy.ops.object.mode_set(mode="OBJECT")
-
-
-def _get_or_create_bone_group(bone_anim_index, armature_ob, bone_index, bone_groups_cache):
-    bone_group_name = BONE_INDEX_TO_GROUP.get(bone_anim_index, "OTHER")
-
-    bone_group_cache = bone_groups_cache.get(bone_group_name) or bone_groups_cache["OTHER"]
-    layer_index = bone_group_cache["layer"]
-    _move_bone_to_layers(armature_ob, bone_index, 0, layer_index)
-
-    if bone_group_cache.get("bl_group"):
-        return bone_group_cache["bl_group"]
-
-    bl_bone_group = armature_ob.pose.bone_groups.new(name=bone_group_cache["name"])
-    bl_bone_group.color_set = bone_group_cache["color_set"]
-    bone_group_cache["bl_group"] = bl_bone_group
-
-    return bl_bone_group
-
-
-def _move_bone_to_layers(armature_ob, bone_index, *layer_indices):
-    layers = [False] * 32
-    for layer_index in layer_indices:
-        layers[layer_index] = True
-    armature_ob.data.bones[bone_index].select = True
-    bpy.ops.pose.bone_layers(layers=layers)
-    armature_ob.data.bones[bone_index].select = False
 
 
 def _get_weights_per_bone(mod, mesh, vertices_array):
