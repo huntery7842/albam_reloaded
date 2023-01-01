@@ -120,7 +120,7 @@ def _import_vertices(mod, mesh):
     if mesh.vertex_fmt != 0:
         locations = (transform_vertices_from_bbox(vf, mod) for vf in vertices_array)
     else:
-        locations = ((vf.position_x, vf.position_y, vf.position_z) for vf in vertices_array)
+        locations = ((vf.position.x, vf.position.y, vf.position.z) for vf in vertices_array)
 
     locations = map(lambda t: (t[0] / 100, t[2] / -100, t[1] / 100), locations)
     # from [0, 255] o [-1, 1]
