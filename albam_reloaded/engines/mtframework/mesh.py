@@ -1,13 +1,13 @@
 import ctypes
 import io
 from itertools import chain
+from struct import unpack
 
 import bpy
 from kaitaistruct import KaitaiStream
 from mathutils import Matrix, Vector
 
 from albam_reloaded.lib.blender import strip_triangles_to_triangles_list
-from albam_reloaded.lib.half_float import unpack_half_float
 from albam_reloaded.lib.misc import chunks
 from . import BONE_INDEX_TO_GROUP, EXTENSION_TO_FILE_ID
 from .material import build_blender_materials
@@ -135,14 +135,17 @@ def _import_vertices(mod, mesh):
     # y up to z up
     normals = map(lambda n: (n[0], n[2] * -1, n[1]), normals)
 
-    uvs = [(unpack_half_float(v.uv.u), unpack_half_float(v.uv.v) * -1) for v in vertices_array]
+    uvs = [(unpack('e', bytes(v.uv.u))[0],
+           unpack('e', bytes(v.uv.v))[0] * -1) for v in vertices_array]
     # XXX: normalmap has uvs as well? and then this should be uv3?
     if mesh.vertex_fmt == 0:
         uvs2 = [
-            (unpack_half_float(v.uv2.u), unpack_half_float(v.uv2.v) * -1) for v in vertices_array
+            (unpack('e', bytes(v.uv2.u))[0],
+             unpack('e', bytes(v.uv2.v))[0] * -1) for v in vertices_array
         ]
         uvs3 = [
-            (unpack_half_float(v.uv3.u), unpack_half_float(v.uv3.v) * -1) for v in vertices_array
+            (unpack('e', bytes(v.uv3.u))[0],
+             unpack('e', bytes(v.uv3.v))[0] * -1) for v in vertices_array
         ]
     else:
         uvs2 = []

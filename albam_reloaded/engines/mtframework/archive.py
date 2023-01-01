@@ -2,7 +2,6 @@ import io
 import os
 import zlib
 
-import zlib
 import bpy
 from kaitaistruct import KaitaiStream
 

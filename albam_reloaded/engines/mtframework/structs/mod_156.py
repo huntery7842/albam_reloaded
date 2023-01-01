@@ -147,8 +147,20 @@ class Mod156(KaitaiStruct):
 
             self.normal = Mod156.Vec4U1(self._io, self, self._root)
             self.tangent = Mod156.Vec4U1(self._io, self, self._root)
-            self.uv = Mod156.Vec2U2(self._io, self, self._root)
-            self.uv2 = Mod156.Vec2U2(self._io, self, self._root)
+            self.uv = Mod156.Vec2HalfFloat(self._io, self, self._root)
+            self.uv2 = Mod156.Vec2HalfFloat(self._io, self, self._root)
+
+
+    class Vec2HalfFloat(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.u = self._io.read_bytes(2)
+            self.v = self._io.read_bytes(2)
 
 
     class Matrix4x4(KaitaiStruct):
@@ -193,21 +205,9 @@ class Mod156(KaitaiStruct):
             self.position = Mod156.Vec3(self._io, self, self._root)
             self.normal = Mod156.Vec4U1(self._io, self, self._root)
             self.tangent = Mod156.Vec4U1(self._io, self, self._root)
-            self.uv = Mod156.Vec2U2(self._io, self, self._root)
-            self.uv2 = Mod156.Vec2U2(self._io, self, self._root)
-            self.uv3 = Mod156.Vec2U2(self._io, self, self._root)
-
-
-    class Vec2U2(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.u = self._io.read_u2le()
-            self.v = self._io.read_u2le()
+            self.uv = Mod156.Vec2HalfFloat(self._io, self, self._root)
+            self.uv2 = Mod156.Vec2HalfFloat(self._io, self, self._root)
+            self.uv3 = Mod156.Vec2HalfFloat(self._io, self, self._root)
 
 
     class Vec4U1(KaitaiStruct):
@@ -413,7 +413,7 @@ class Mod156(KaitaiStruct):
                 self.weight_values[i] = self._io.read_u1()
 
             self.normal = Mod156.Vec4U1(self._io, self, self._root)
-            self.uv = Mod156.Vec2U2(self._io, self, self._root)
+            self.uv = Mod156.Vec2HalfFloat(self._io, self, self._root)
 
 
 

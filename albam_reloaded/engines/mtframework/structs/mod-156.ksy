@@ -191,10 +191,10 @@ types:
       - {id: z, type: s2}
       - {id: w, type: s2}
 
-  vec2_u2:
+  vec2_half_float:
     seq:
-      - {id: u, type: u2}
-      - {id: v, type: u2}
+      - {id: u, size: 2}
+      - {id: v, size: 2}
 
   matrix4x4:
     seq:
@@ -208,9 +208,9 @@ types:
       - {id: position, type: vec3}
       - {id: normal, type: vec4_u1}
       - {id: tangent, type: vec4_u1}
-      - {id: uv, type: vec2_u2}
-      - {id: uv2, type: vec2_u2}
-      - {id: uv3, type: vec2_u2}
+      - {id: uv, type: vec2_half_float}
+      - {id: uv2, type: vec2_half_float}
+      - {id: uv3, type: vec2_half_float}
 
   vertex:
     seq:
@@ -219,8 +219,8 @@ types:
       - {id: weight_values, type: u1, repeat: expr, repeat-expr: 4}
       - {id: normal, type: vec4_u1}
       - {id: tangent, type: vec4_u1}
-      - {id: uv, type: vec2_u2}
-      - {id: uv2, type: vec2_u2}
+      - {id: uv, type: vec2_half_float}
+      - {id: uv2, type: vec2_half_float}
 
   vertex_5:
     seq:
@@ -228,4 +228,4 @@ types:
       - {id: bone_indices, type: u1, repeat: expr, repeat-expr: 8}
       - {id: weight_values, type: u1, repeat: expr, repeat-expr: 8}
       - {id: normal, type: vec4_u1}
-      - {id: uv, type: vec2_u2}
+      - {id: uv, type: vec2_half_float}
