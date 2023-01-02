@@ -21,13 +21,13 @@ class Mod156(KaitaiStruct):
         for i in range(self.header.num_bones):
             self.bones[i] = Mod156.Bone(self._io, self, self._root)
 
-        self.bones_matrix_1 = [None] * (self.header.num_bones)
+        self.parent_space_matrices = [None] * (self.header.num_bones)
         for i in range(self.header.num_bones):
-            self.bones_matrix_1[i] = Mod156.Matrix4x4(self._io, self, self._root)
+            self.parent_space_matrices[i] = Mod156.Matrix4x4(self._io, self, self._root)
 
-        self.bones_matrix_world = [None] * (self.header.num_bones)
+        self.inverse_bind_matrices = [None] * (self.header.num_bones)
         for i in range(self.header.num_bones):
-            self.bones_matrix_world[i] = Mod156.Matrix4x4(self._io, self, self._root)
+            self.inverse_bind_matrices[i] = Mod156.Matrix4x4(self._io, self, self._root)
 
         if self.header.num_bones != 0:
             self.bone_map = self._io.read_bytes(256)

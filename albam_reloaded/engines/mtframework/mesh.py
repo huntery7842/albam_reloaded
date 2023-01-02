@@ -5,7 +5,7 @@ from struct import unpack
 
 import bpy
 from kaitaistruct import KaitaiStream
-from mathutils import Matrix, Vector
+from mathutils import Matrix
 
 from albam_reloaded.lib.blender import strip_triangles_to_triangles_list
 from albam_reloaded.lib.misc import chunks
@@ -179,42 +179,24 @@ def build_blender_armature(mod, bl_object_parent):
     bpy.ops.object.mode_set(mode="EDIT")
 
     blender_bones = []
+    scale = 0.01
     non_deform_bone_indices = get_non_deform_bone_indices(mod)
-
-    for i, bone in enumerate(mod.bones):  # add counter to the array
+    for i, bone in enumerate(mod.bones):
         blender_bone = armature.edit_bones.new(str(i))
-
-        if i in non_deform_bone_indices:
-            blender_bone.use_deform = False
-        parents = get_bone_parents_from_mod(bone, mod.bones)
-        if not parents:
-            blender_bone.head = Vector(
-                (bone.location.x / 100, bone.location.z * -1 / 100, bone.location.y / 100)
-            )
-            blender_bone.tail = Vector(
-                (blender_bone.head[0], blender_bone.head[1], blender_bone.head[2] + 0.01)
-            )
-        else:
-            chain = [i] + parents
-            wtm = Matrix.Translation((0, 0, 0))
-            for bi in reversed(chain):
-                b = mod.bones[bi]
-                wtm = wtm @ Matrix.Translation(
-                    (b.location.x / 100, b.location.z / 100 * -1, b.location.y / 100)
-                )
-            blender_bone.head = wtm.to_translation()
-            blender_bone.parent = blender_bones[bone.idx_parent]
-
-        blender_bone.tail = Vector(
-            (blender_bone.head[0], blender_bone.head[1], blender_bone.head[2] + 0.01)
-        )
+        blender_bone.parent = blender_bones[bone.idx_parent] if i != 0 else None
+        blender_bone.use_deform = False if i in non_deform_bone_indices else True
+        m = mod.inverse_bind_matrices[i]
+        head = Matrix((
+            (m.row_1.x, m.row_1.y, m.row_1.z, m.row_1.w),
+            (m.row_2.x, m.row_2.y, m.row_2.z, m.row_2.w),
+            (m.row_3.x, m.row_3.y, m.row_3.z, m.row_3.w),
+            (m.row_4.x, m.row_4.y, m.row_4.z, m.row_4.w)
+        )).inverted().transposed().to_translation()
+        blender_bone.head = ([head[0] * scale, -head[2] * scale, head[1] * scale])
+        blender_bone.tail = ([head[0] * scale, -head[2] * scale, (head[1] * scale) + 0.01])
         blender_bones.append(blender_bone)
 
-    assert len(blender_bones) == len(mod.bones)
-
     bpy.ops.object.mode_set(mode="OBJECT")
-    assert len(armature.bones) == len(mod.bones)
-
     return armature_ob
 
 
@@ -286,17 +268,3 @@ def transform_vertices_from_bbox(vertex_format, mod):
     z = z / 32767 * (mod.header.bbox_max.z - mod.header.bbox_min.z) + mod.header.bbox_min.z
 
     return (x, y, z)
-
-
-def get_bone_parents_from_mod(bone, bones):
-    parents = []
-    parent_index = bone.idx_parent
-    child_bone = bone
-    if parent_index != 255:
-        parents.append(parent_index)
-    while parent_index != 255:
-        child_bone = bones[child_bone.idx_parent]
-        parent_index = child_bone.idx_parent
-        if parent_index != 255:
-            parents.append(parent_index)
-    return parents

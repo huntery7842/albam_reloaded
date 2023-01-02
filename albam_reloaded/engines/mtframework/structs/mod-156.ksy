@@ -8,8 +8,8 @@ meta:
 seq:
   - {id: header, type: mod_header}
   - {id: bones, type: bone, repeat: expr, repeat-expr: header.num_bones}
-  - {id: bones_matrix_1, type: matrix4x4, repeat: expr, repeat-expr: header.num_bones}
-  - {id: bones_matrix_world, type: matrix4x4, repeat: expr, repeat-expr: header.num_bones}
+  - {id: parent_space_matrices, type: matrix4x4, repeat: expr, repeat-expr: header.num_bones}
+  - {id: inverse_bind_matrices, type: matrix4x4, repeat: expr, repeat-expr: header.num_bones}
   - {id: bone_map, size: 256, if: header.num_bones != 0}
   - {id: bones_mapping, type: bone_mapping, repeat: expr, repeat-expr: header.num_bone_mappings}
   - {id: groups, type: group, repeat: expr, repeat-expr: header.num_groups}
