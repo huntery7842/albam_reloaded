@@ -1,9 +1,9 @@
 meta:
   endian: le
   file-extension: mod
-  id: mod_156
+  id: mod_21
   ks-version: 0.9
-  title: MTFramework model format
+  title: MTFramework model format 156
 
 seq:
   - {id: header, type: mod_header}

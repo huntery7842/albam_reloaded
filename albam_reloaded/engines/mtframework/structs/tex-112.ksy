@@ -3,7 +3,7 @@ meta:
   file-extension: tex
   id: tex_112
   ks-version: 0.9
-  title: MTFramework texture format
+  title: MTFramework texture format version 112
 
 seq:
   - {id: id_magic, contents: [0x54, 0x45, 0x58, 0x00]}
