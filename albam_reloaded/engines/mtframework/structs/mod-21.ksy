@@ -85,8 +85,71 @@ types:
         repeat: expr
         repeat-expr: face_count
         type: u2
+      vertices:
+        pos: _root.header.offset_buffer_vertices + vertex_offset + (vertex_position * vertex_stride)
+        repeat: expr
+        repeat-expr: num_vertices
+        type:
+          switch-on: vertex_format
+          cases:
+            0x14d40020: vertex_14d4
+            0x2f55c03d: vertex_2f55
+            0xa320c016: vertex_a320
+            0xa8fab018: vertex_a8fa
+            0xb0983013: vertex_b098
+            0xbb424024: vertex_bb42
+            0xc31f201c: vertex_c31f2
+            0xcb68015: vertex_cb68
+            0xdb7da014: vertex_db7d
 
+  vertex_14d4: # 28
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 20}
 
+  vertex_2f55: # 64
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 56}
+
+  vertex_a320: # 28
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 20}
+
+  vertex_a8fa: # 20
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 12}
+
+  vertex_b098: # 12
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 4}
+
+  vertex_bb42: # 36
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 28}
+
+  vertex_c31f2: # 24
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 16}
+  vertex_cb68: # 20
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 12}
+
+  vertex_db7d: # 16
+    seq:
+      - {id: position, type: vec4_s2}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 8}
+
+  vec2_half_float:
+    seq:
+      - {id: u, size: 2}
+      - {id: v, size: 2}
   vec3:
     seq:
       - {id: x, type: f4}
@@ -99,6 +162,13 @@ types:
       - {id: y, type: f4}
       - {id: z, type: f4}
       - {id: w, type: f4}
+
+  vec4_s2:
+    seq:
+      - {id: x, type: s2}
+      - {id: y, type: s2}
+      - {id: z, type: s2}
+      - {id: w, type: s2}
 
   matrix4x4:
     seq:
