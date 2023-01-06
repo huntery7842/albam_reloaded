@@ -1,7 +1,7 @@
 meta:
   endian: le
   file-extension: mod
-  id: mod_21
+  id: mod_156
   ks-version: 0.9
   title: MTFramework model format 156
 
@@ -114,7 +114,7 @@ types:
       - {id: constant, type: u1}
       - {id: level_of_detail, type: u1}
       - {id: unk_01, type: u1}
-      - {id: vertex_fmt, type: u1}
+      - {id: vertex_format, type: u1}
       - {id: vertex_stride, type: u1}
       - {id: vertex_stride_2, type: u1}
       - {id: unk_03, type: u1}
@@ -137,12 +137,17 @@ types:
       - {id: unk_10, type: u2}
       - {id: unk_11, type: u2}
     instances:
+      indices:
+        pos: _root.header.offset_buffer_indices + face_offset * 2 + face_position * 2
+        repeat: expr
+        repeat-expr: face_count
+        type: u2
       vertices:
         pos: _root.header.offset_buffer_vertices + (vertex_index_start_2 * vertex_stride) + vertex_offset
         repeat: expr
         repeat-expr: num_vertices # TODO: special case
         type:
-          switch-on: vertex_fmt
+          switch-on: vertex_format
           cases:
             0: vertex_0
             1: vertex

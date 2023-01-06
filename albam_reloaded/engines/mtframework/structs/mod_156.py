@@ -237,7 +237,7 @@ class Mod156(KaitaiStruct):
             self.constant = self._io.read_u1()
             self.level_of_detail = self._io.read_u1()
             self.unk_01 = self._io.read_u1()
-            self.vertex_fmt = self._io.read_u1()
+            self.vertex_format = self._io.read_u1()
             self.vertex_stride = self._io.read_u1()
             self.vertex_stride_2 = self._io.read_u1()
             self.unk_03 = self._io.read_u1()
@@ -261,6 +261,20 @@ class Mod156(KaitaiStruct):
             self.unk_11 = self._io.read_u2le()
 
         @property
+        def indices(self):
+            if hasattr(self, '_m_indices'):
+                return self._m_indices if hasattr(self, '_m_indices') else None
+
+            _pos = self._io.pos()
+            self._io.seek(((self._root.header.offset_buffer_indices + (self.face_offset * 2)) + (self.face_position * 2)))
+            self._m_indices = [None] * (self.face_count)
+            for i in range(self.face_count):
+                self._m_indices[i] = self._io.read_u2le()
+
+            self._io.seek(_pos)
+            return self._m_indices if hasattr(self, '_m_indices') else None
+
+        @property
         def vertices(self):
             if hasattr(self, '_m_vertices'):
                 return self._m_vertices if hasattr(self, '_m_vertices') else None
@@ -269,7 +283,7 @@ class Mod156(KaitaiStruct):
             self._io.seek(((self._root.header.offset_buffer_vertices + (self.vertex_index_start_2 * self.vertex_stride)) + self.vertex_offset))
             self._m_vertices = [None] * (self.num_vertices)
             for i in range(self.num_vertices):
-                _on = self.vertex_fmt
+                _on = self.vertex_format
                 if _on == 0:
                     self._m_vertices[i] = Mod156.Vertex0(self._io, self, self._root)
                 elif _on == 4:

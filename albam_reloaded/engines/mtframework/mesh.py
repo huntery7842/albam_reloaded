@@ -117,7 +117,7 @@ def build_blender_mesh(mod, mesh, mesh_index, name, materials):
 def _import_vertices(mod, mesh):
     vertices_array = mesh.vertices
 
-    if mesh.vertex_fmt != 0:
+    if mesh.vertex_format != 0:
         locations = (transform_vertices_from_bbox(vf, mod) for vf in vertices_array)
     else:
         locations = ((vf.position.x, vf.position.y, vf.position.z) for vf in vertices_array)
@@ -138,7 +138,7 @@ def _import_vertices(mod, mesh):
     uvs = [(unpack('e', bytes(v.uv.u))[0],
            unpack('e', bytes(v.uv.v))[0] * -1) for v in vertices_array]
     # XXX: normalmap has uvs as well? and then this should be uv3?
-    if mesh.vertex_fmt == 0:
+    if mesh.vertex_format == 0:
         uvs2 = [
             (unpack('e', bytes(v.uv2.u))[0],
              unpack('e', bytes(v.uv2.v))[0] * -1) for v in vertices_array
@@ -220,22 +220,6 @@ def _get_weights_per_bone(mod, mesh, vertices_array):
             bone_data = weights_per_bone.setdefault(real_bone_index, [])
             bone_data.append((vertex_index, vertex.weight_values[bi] / 255))
     return weights_per_bone
-
-
-def get_indices_array(mod, mesh):
-    offset = 0
-    position = mesh.face_offset * 2 + mesh.face_position * 2
-    index_buffer_size = len(mod.index_buffer)
-    if position > index_buffer_size:
-        raise RuntimeError(
-            "Error building mesh in get_indices_array (out of bounds reference)"
-            "Size of mod.indices_buffer: {} mesh.face_offset: {}, mesh.face_position: {}".format(
-                index_buffer_size, mesh.face_offset, mesh.face_position
-            )
-        )
-    offset += position
-    index_buffer_size = len(mod.index_buffer)
-    return (ctypes.c_ushort * mesh.face_count).from_buffer_copy(mod.index_buffer, offset)
 
 
 def get_non_deform_bone_indices(mod):
