@@ -79,6 +79,13 @@ types:
       - {id: min_index, type: u2}
       - {id: max_index, type: u2}
       - {id: hash, type: u4}
+    instances:
+      indices:
+        pos: _root.header.offset_buffer_indices + face_offset * 2 + face_position * 2
+        repeat: expr
+        repeat-expr: face_count
+        type: u2
+
 
   vec3:
     seq:
