@@ -11,9 +11,12 @@ from albam_reloaded.lib.misc import chunks
 from . import EXTENSION_TO_FILE_ID
 from .material import build_blender_materials
 from .structs.mod_156 import Mod156
+from .structs.mod_21 import Mod21
+
 
 MOD_CLASS_MAPPER = {
     156: Mod156,
+    210: Mod21,
 }
 
 
@@ -67,7 +70,7 @@ def build_blender_mesh(mod, mesh, name, bbox_data, use_tri_strips=False):
     weights_per_bone = {}
 
     for vertex_index, vertex in enumerate(mesh.vertices):
-        _process_locations(vertex, locations, bbox_data)
+        _process_locations(mod.header.version, vertex, locations, bbox_data)
         _process_normals(vertex, normals)
         _process_uvs(vertex, uvs_1, uvs_2, uvs_3)
         _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone)
@@ -88,21 +91,29 @@ def build_blender_mesh(mod, mesh, name, bbox_data, use_tri_strips=False):
     return ob
 
 
-def _process_locations(vertex, vertices_out, bbox_data):
+def _process_locations(mod_version, vertex, vertices_out, bbox_data):
     x = vertex.position.x
     y = vertex.position.y
     z = vertex.position.z
+
     w = getattr(vertex.position, 'w', None)
-    if w:
+    if w is not None and mod_version == 156:
         x = x / 32767 * bbox_data.width + bbox_data.min_x
         y = y / 32767 * bbox_data.height + bbox_data.min_y
         z = z / 32767 * bbox_data.depth + bbox_data.min_z
+
+    elif w is not None and mod_version == 210:
+        x = x / 32767 * bbox_data.dimension + bbox_data.min_x
+        y = y / 32767 * bbox_data.dimension + bbox_data.min_y
+        z = z / 32767 * bbox_data.dimension + bbox_data.min_z
 
     # Y-up to z-up and cm to m
     vertices_out.append((x * 0.01, -z * 0.01, y * 0.01))
 
 
 def _process_normals(vertex, normals_out):
+    if not hasattr(vertex, 'normal'):
+        return
     # from [0, 255] o [-1, 1]
     x = ((vertex.normal.x / 255) * 2) - 1
     y = ((vertex.normal.y / 255) * 2) - 1
@@ -154,6 +165,8 @@ def _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone):
 
 
 def _build_normals(bl_mesh, normals):
+    if not normals:
+        return
     loop_normals = []
     bl_mesh.create_normals_split()
     bl_mesh.validate(clean_customdata=False)
@@ -185,6 +198,8 @@ def _build_weights(bl_obj, weights_per_bone):
 
 
 def build_blender_armature(mod, bl_object_parent):
+    if mod.header.version != 156:
+        return
     armature_name = bl_object_parent.name + "_skel"
     armature = bpy.data.armatures.new(armature_name)
     armature_ob = bpy.data.objects.new(armature_name, armature)

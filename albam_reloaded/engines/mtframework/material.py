@@ -12,7 +12,8 @@ from .structs.tex_112 import Tex112
 
 
 def build_blender_materials(arc, mod, name_prefix="material"):
-
+    if mod.header.version != 156:
+        return {}
     textures = build_blender_textures(arc, mod)
     materials = {}
 
