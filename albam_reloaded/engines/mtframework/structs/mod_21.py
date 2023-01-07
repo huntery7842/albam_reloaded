@@ -273,8 +273,8 @@ class Mod21(KaitaiStruct):
         def _read(self):
             self.idx_group = self._io.read_u2le()
             self.num_vertices = self._io.read_u2le()
-            self.index_group = self._io.read_u1()
-            self.index_material = self._io.read_u2le()
+            self.unk_01 = self._io.read_u1()
+            self.idx_material = self._io.read_u2le()
             self.level_of_detail = self._io.read_u1()
             self.type_mesh = self._io.read_u1()
             self.unk_class_mesh = self._io.read_u1()

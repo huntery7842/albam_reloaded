@@ -60,8 +60,8 @@ types:
     seq:
       - {id: idx_group, type: u2}
       - {id: num_vertices, type: u2}
-      - {id: index_group, type: u1}
-      - {id: index_material, type: u2}
+      - {id: unk_01, type: u1}
+      - {id: idx_material, type: u2}
       - {id: level_of_detail, type: u1}
       - {id: type_mesh, type: u1}
       - {id: unk_class_mesh, type: u1}
