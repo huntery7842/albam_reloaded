@@ -1,3 +1,4 @@
+from collections import namedtuple
 import io
 from struct import unpack
 
@@ -28,6 +29,7 @@ def build_blender_model(arc, mod_file_entry):
     assert mod_version in MOD_CLASS_MAPPER, f"Unsupported version: {mod_version}"
     Mod = MOD_CLASS_MAPPER[mod_version]
     mod = Mod(KaitaiStream(io.BytesIO(mod_buffer)))
+    bbox_data = _create_bbox_data(mod)
     skeleton = build_blender_armature(mod, bl_mod_container)
     materials = build_blender_materials(arc, mod, bl_mod_container_name)
     meshes_parent = skeleton or bl_mod_container
@@ -35,7 +37,7 @@ def build_blender_model(arc, mod_file_entry):
     for i, mesh in enumerate(m for m in mod.meshes if m.level_of_detail in LODS_TO_IMPORT):
         try:
             name = f'{bl_mod_container_name}_{str(i).zfill(2)}'
-            bl_mesh_ob = build_blender_mesh(mod, mesh, name, use_tri_strips=mod_version == 156)
+            bl_mesh_ob = build_blender_mesh(mod, mesh, name, bbox_data, mod_version == 156)
             bl_mesh_ob.parent = meshes_parent
             if skeleton:
                 modifier = bl_mesh_ob.modifiers.new(type="ARMATURE", name="armature")
@@ -53,7 +55,7 @@ def build_blender_model(arc, mod_file_entry):
     return bl_mod_container
 
 
-def build_blender_mesh(mod, mesh, name, use_tri_strips=False):
+def build_blender_mesh(mod, mesh, name, bbox_data, use_tri_strips=False):
     me_ob = bpy.data.meshes.new(name)
     ob = bpy.data.objects.new(name, me_ob)
 
@@ -65,7 +67,7 @@ def build_blender_mesh(mod, mesh, name, use_tri_strips=False):
     weights_per_bone = {}
 
     for vertex_index, vertex in enumerate(mesh.vertices):
-        _process_locations(mod, vertex, locations)
+        _process_locations(vertex, locations, bbox_data)
         _process_normals(vertex, normals)
         _process_uvs(vertex, uvs_1, uvs_2, uvs_3)
         _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone)
@@ -86,15 +88,15 @@ def build_blender_mesh(mod, mesh, name, use_tri_strips=False):
     return ob
 
 
-def _process_locations(mod, vertex, vertices_out):
+def _process_locations(vertex, vertices_out, bbox_data):
     x = vertex.position.x
     y = vertex.position.y
     z = vertex.position.z
     w = getattr(vertex.position, 'w', None)
     if w:
-        x = x / 32767 * (mod.header.bbox_max.x - mod.header.bbox_min.x) + mod.header.bbox_min.x
-        y = y / 32767 * (mod.header.bbox_max.y - mod.header.bbox_min.y) + mod.header.bbox_min.y
-        z = z / 32767 * (mod.header.bbox_max.z - mod.header.bbox_min.z) + mod.header.bbox_min.z
+        x = x / 32767 * bbox_data.width + bbox_data.min_x
+        y = y / 32767 * bbox_data.height + bbox_data.min_y
+        z = z / 32767 * bbox_data.depth + bbox_data.min_z
 
     # Y-up to z-up and cm to m
     vertices_out.append((x * 0.01, -z * 0.01, y * 0.01))
@@ -219,6 +221,45 @@ def build_blender_armature(mod, bl_object_parent):
 
     bpy.ops.object.mode_set(mode="OBJECT")
     return armature_ob
+
+
+def _create_bbox_data(mod):
+    BboxData = namedtuple('BboxData', (
+        'min_x',
+        'min_y',
+        'min_z',
+        'max_x',
+        'max_y',
+        'max_z',
+        'width',
+        'height',
+        'depth',
+        'dimension')
+    )
+    dimension = max(
+        abs(mod.header.bbox_min.x),
+        abs(mod.header.bbox_min.y),
+        abs(mod.header.bbox_min.z)
+    ) + max(
+        abs(mod.header.bbox_max.x),
+        abs(mod.header.bbox_max.y),
+        abs(mod.header.bbox_max.z)
+    )
+
+    bbox_data = BboxData(
+        min_x=mod.header.bbox_min.x,
+        min_y=mod.header.bbox_min.y,
+        min_z=mod.header.bbox_min.z,
+        max_x=mod.header.bbox_max.x,
+        max_y=mod.header.bbox_max.y,
+        max_z=mod.header.bbox_max.z,
+        width=mod.header.bbox_max.x - mod.header.bbox_min.x,
+        height=mod.header.bbox_max.y - mod.header.bbox_min.y,
+        depth=mod.header.bbox_max.z - mod.header.bbox_min.z,
+        dimension=dimension
+    )
+
+    return bbox_data
 
 
 def get_non_deform_bone_indices(mod):
