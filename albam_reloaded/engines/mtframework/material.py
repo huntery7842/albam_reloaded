@@ -14,13 +14,13 @@ from .structs.tex_112 import Tex112
 def build_blender_materials(arc, mod, name_prefix="material"):
 
     textures = build_blender_textures(arc, mod)
-    materials = []
+    materials = {}
 
     if not bpy.data.node_groups.get("MT Framework shader"):
         _create_shader_node_group()
 
-    for i, material in enumerate(mod.materials):
-        blender_material = bpy.data.materials.new(f"{name_prefix}_{str(i).zfill(2)}")
+    for idx_material, material in enumerate(mod.materials):
+        blender_material = bpy.data.materials.new(f"{name_prefix}_{str(idx_material).zfill(2)}")
         blender_material.use_nodes = True
         # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
         blender_material.blend_method = "CLIP"
@@ -36,7 +36,7 @@ def build_blender_materials(arc, mod, name_prefix="material"):
 
         link = blender_material.node_tree.links.new
         link(shader_node_group.outputs[0], material_output.inputs[0])
-        materials.append(blender_material)
+        materials[idx_material] = blender_material
 
         texture_slots = [
             'texture_slot_diffuse',

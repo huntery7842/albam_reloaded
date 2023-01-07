@@ -1,6 +1,4 @@
-import ctypes
 import io
-from itertools import chain
 from struct import unpack
 
 import bpy
@@ -13,153 +11,173 @@ from . import EXTENSION_TO_FILE_ID
 from .material import build_blender_materials
 from .structs.mod_156 import Mod156
 
+MOD_CLASS_MAPPER = {
+    156: Mod156,
+}
+
 
 def build_blender_model(arc, mod_file_entry):
+    LODS_TO_IMPORT = (1, 255)
+
     bl_mod_container_name = mod_file_entry.file_path
     bl_mod_container = bpy.data.objects.new(bl_mod_container_name, None)
     mod_type = EXTENSION_TO_FILE_ID['mod']
 
     mod_buffer = arc.get_file(mod_file_entry.file_path, mod_type)
-    mod = Mod156(KaitaiStream(io.BytesIO(mod_buffer)))
-    materials = build_blender_materials(arc, mod, bl_mod_container_name)
+    mod_version = mod_buffer[4]
+    assert mod_version in MOD_CLASS_MAPPER, f"Unsupported version: {mod_version}"
+    Mod = MOD_CLASS_MAPPER[mod_version]
+    mod = Mod(KaitaiStream(io.BytesIO(mod_buffer)))
     skeleton = build_blender_armature(mod, bl_mod_container)
+    materials = build_blender_materials(arc, mod, bl_mod_container_name)
     meshes_parent = skeleton or bl_mod_container
 
-    LODS_TO_IMPORT = (1, 255)
-    meshes = [m for m in mod.meshes if m.level_of_detail in LODS_TO_IMPORT]
-    for i, mesh in enumerate(meshes):
-        bl_mesh_name = f'{bl_mod_container_name}_{i}'
+    for i, mesh in enumerate(m for m in mod.meshes if m.level_of_detail in LODS_TO_IMPORT):
         try:
-            bl_mesh_ob = build_blender_mesh(mod, mesh, i, bl_mesh_name, materials)
+            name = f'{bl_mod_container_name}_{str(i).zfill(2)}'
+            bl_mesh_ob = build_blender_mesh(mod, mesh, name, use_tri_strips=mod_version == 156)
             bl_mesh_ob.parent = meshes_parent
             if skeleton:
                 modifier = bl_mesh_ob.modifiers.new(type="ARMATURE", name="armature")
                 modifier.object = meshes_parent
                 modifier.use_vertex_groups = True
+            if materials.get(mesh.idx_material):
+                bl_mesh_ob.data.materials.append(materials[mesh.idx_material])
+            else:
+                print(f"[{bl_mod_container_name}] material {mesh.idx_material} not found")
+
         except Exception as err:
             print(f'[{bl_mod_container_name}] error building mesh {i} {err}')
-            raise
+            continue
 
     return bl_mod_container
 
 
-def build_blender_mesh(mod, mesh, mesh_index, name, materials):
+def build_blender_mesh(mod, mesh, name, use_tri_strips=False):
     me_ob = bpy.data.meshes.new(name)
     ob = bpy.data.objects.new(name, me_ob)
 
-    imported_vertices = _import_vertices(mod, mesh)
-    vertex_locations = imported_vertices["locations"]
-    vertex_normals = imported_vertices["normals"]
-    uvs_per_vertex = imported_vertices["uvs"]
-    uvs_per_vertex_2 = imported_vertices["uvs2"]
-    uvs_per_vertex_3 = imported_vertices["uvs3"]
-    weights_per_bone = imported_vertices["weights_per_bone"]
-    indices = get_indices_array(mod, mesh)
-    indices = strip_triangles_to_triangles_list(indices)
-    faces = chunks(indices, 3)
-    weights_per_bone = imported_vertices["weights_per_bone"]
+    locations = []
+    normals = []
+    uvs_1 = []
+    uvs_2 = []
+    uvs_3 = []
+    weights_per_bone = {}
 
+    for vertex_index, vertex in enumerate(mesh.vertices):
+        _process_locations(mod, vertex, locations)
+        _process_normals(vertex, normals)
+        _process_uvs(vertex, uvs_1, uvs_2, uvs_3)
+        _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone)
+
+    indices = strip_triangles_to_triangles_list(mesh.indices) if use_tri_strips else mesh.indices
     assert min(indices) >= 0, "Bad face indices"  # Blender crashes if not
-    me_ob.from_pydata(vertex_locations, [], faces)
 
-    me_ob.create_normals_split()
+    me_ob.from_pydata(locations, [], chunks(indices, 3))
 
-    me_ob.validate(clean_customdata=False)
-    me_ob.update(calc_edges=True)
-    me_ob.polygons.foreach_set("use_smooth", [True] * len(me_ob.polygons))
+    _build_normals(me_ob, normals)
+    _build_uvs(me_ob, uvs_1, 'uv1')
+    _build_uvs(me_ob, uvs_2, 'uv2')
+    _build_uvs(me_ob, uvs_3, 'uv3')
+    _build_weights(ob, weights_per_bone)
 
-    loop_normals = []
-    for loop in me_ob.loops:
-        loop_normals.append(vertex_normals[loop.vertex_index])
-
-    me_ob.normals_split_custom_set_from_vertices(vertex_normals)
-    me_ob.use_auto_smooth = True
-
-    try:
-        mesh_material = materials[mesh.idx_material]
-        # TODO
-        # if not mesh.use_cast_shadows and mesh_material.shadow_method:
-        #    mesh_material.shadow_method = "NONE"
-        me_ob.materials.append(mesh_material)
-    except IndexError:
-        print("material not found")
-
-    for bone_index, data in weights_per_bone.items():
-        vg = ob.vertex_groups.new(name=str(bone_index))
-        for vertex_index, weight_value in data:
-            vg.add((vertex_index,), weight_value, "ADD")
-
-    if uvs_per_vertex:
-        uv_layer = me_ob.uv_layers.new(name=name)
-        per_loop_list = []
-        for loop in me_ob.loops:
-            offset = loop.vertex_index * 2
-            per_loop_list.extend((uvs_per_vertex[offset], uvs_per_vertex[offset + 1]))
-        uv_layer.data.foreach_set("uv", per_loop_list)
-
-    # Checking material until we find a better way. Taken from max script
-    has_light_map = mod.materials[mesh.idx_material].texture_slot_lightmap > 0
-    has_normal_map = mod.materials[mesh.idx_material].texture_slot_normal > 0
-    if has_light_map:
-        if has_normal_map:
-            source_uvs = uvs_per_vertex_3
-        else:
-            source_uvs = uvs_per_vertex_2
-        uv_layer = me_ob.uv_layers.new(name="lightmap")
-        per_loop_list = []
-        for loop in me_ob.loops:
-            offset = loop.vertex_index * 2
-            per_loop_list.extend((source_uvs[offset], source_uvs[offset + 1]))
-        uv_layer.data.foreach_set("uv", per_loop_list)
     return ob
 
 
-def _import_vertices(mod, mesh):
-    vertices_array = mesh.vertices
+def _process_locations(mod, vertex, vertices_out):
+    x = vertex.position.x
+    y = vertex.position.y
+    z = vertex.position.z
+    w = getattr(vertex.position, 'w', None)
+    if w:
+        x = x / 32767 * (mod.header.bbox_max.x - mod.header.bbox_min.x) + mod.header.bbox_min.x
+        y = y / 32767 * (mod.header.bbox_max.y - mod.header.bbox_min.y) + mod.header.bbox_min.y
+        z = z / 32767 * (mod.header.bbox_max.z - mod.header.bbox_min.z) + mod.header.bbox_min.z
 
-    if mesh.vertex_format != 0:
-        locations = (transform_vertices_from_bbox(vf, mod) for vf in vertices_array)
-    else:
-        locations = ((vf.position.x, vf.position.y, vf.position.z) for vf in vertices_array)
+    # Y-up to z-up and cm to m
+    vertices_out.append((x * 0.01, -z * 0.01, y * 0.01))
 
-    locations = map(lambda t: (t[0] / 100, t[2] / -100, t[1] / 100), locations)
+
+def _process_normals(vertex, normals_out):
     # from [0, 255] o [-1, 1]
-    normals = map(
-        lambda v: (
-            ((v.normal.x / 255) * 2) - 1,
-            ((v.normal.y / 255) * 2) - 1,
-            ((v.normal.z / 255) * 2) - 1,
-        ),
-        vertices_array,
-    )
+    x = ((vertex.normal.x / 255) * 2) - 1
+    y = ((vertex.normal.y / 255) * 2) - 1
+    z = ((vertex.normal.z / 255) * 2) - 1
     # y up to z up
-    normals = map(lambda n: (n[0], n[2] * -1, n[1]), normals)
+    normals_out.append((x, -z, y))
 
-    uvs = [(unpack('e', bytes(v.uv.u))[0],
-           unpack('e', bytes(v.uv.v))[0] * -1) for v in vertices_array]
-    # XXX: normalmap has uvs as well? and then this should be uv3?
-    if mesh.vertex_format == 0:
-        uvs2 = [
-            (unpack('e', bytes(v.uv2.u))[0],
-             unpack('e', bytes(v.uv2.v))[0] * -1) for v in vertices_array
-        ]
-        uvs3 = [
-            (unpack('e', bytes(v.uv3.u))[0],
-             unpack('e', bytes(v.uv3.v))[0] * -1) for v in vertices_array
-        ]
-    else:
-        uvs2 = []
-        uvs3 = []
 
-    return {
-        "locations": list(locations),
-        "normals": list(normals),
-        # TODO: investigate why uvs don't appear above the image in the UV editor
-        "uvs": list(chain.from_iterable(uvs)),
-        "uvs2": list(chain.from_iterable(uvs2)),
-        "uvs3": list(chain.from_iterable(uvs3)),
-        "weights_per_bone": _get_weights_per_bone(mod, mesh, vertices_array),
-    }
+def _process_uvs(vertex, uvs_1_out, uvs_2_out, uvs_3_out):
+    if not hasattr(vertex, 'uv'):
+        return
+    u = unpack('e', bytes(vertex.uv.u))[0]
+    v = unpack('e', bytes(vertex.uv.v))[0]
+    uvs_1_out.extend((u, -v))
+
+    if not hasattr(vertex, 'uv2'):
+        return
+    u = unpack('e', bytes(vertex.uv2.u))[0]
+    v = unpack('e', bytes(vertex.uv2.v))[0]
+    uvs_2_out.extend((u, -v))
+
+    if not hasattr(vertex, 'uv3'):
+        return
+    u = unpack('e', bytes(vertex.uv3.u))[0]
+    v = unpack('e', bytes(vertex.uv3.v))[0]
+    uvs_3_out.extend((u, -v))
+
+
+def _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone):
+    if not hasattr(vertex, "bone_indices"):
+        return
+
+    bone_palette = mod.bones_mapping[mesh.bone_map_index]
+    for bi, bone_index in enumerate(vertex.bone_indices):
+        if bone_index >= bone_palette.unk_01:
+            real_bone_index = mod.bones_animation_mapping[bone_index]
+        else:
+            try:
+                real_bone_index = mod.bones_mapping[mesh.bone_map_index].indices[bone_index]
+            except IndexError:
+                # Behaviour not observed in original files so far
+                real_bone_index = bone_index
+        if bone_index + vertex.weight_values[bi] == 0:
+            continue
+        bone_data = weights_per_bone.setdefault(real_bone_index, [])
+        bone_data.append((vertex_index, vertex.weight_values[bi] / 255))
+
+    return weights_per_bone
+
+
+def _build_normals(bl_mesh, normals):
+    loop_normals = []
+    bl_mesh.create_normals_split()
+    bl_mesh.validate(clean_customdata=False)
+    bl_mesh.update(calc_edges=True)
+    bl_mesh.polygons.foreach_set("use_smooth", [True] * len(bl_mesh.polygons))
+
+    for loop in bl_mesh.loops:
+        loop_normals.append(normals[loop.vertex_index])
+    bl_mesh.normals_split_custom_set_from_vertices(normals)
+    bl_mesh.use_auto_smooth = True
+
+
+def _build_uvs(bl_mesh, uvs, name='uv'):
+    if not uvs:
+        return
+    uv_layer = bl_mesh.uv_layers.new(name=name)
+    per_loop_list = []
+    for loop in bl_mesh.loops:
+        offset = loop.vertex_index * 2
+        per_loop_list.extend((uvs[offset], uvs[offset + 1]))
+    uv_layer.data.foreach_set("uv", per_loop_list)
+
+
+def _build_weights(bl_obj, weights_per_bone):
+    for bone_index, data in weights_per_bone.items():
+        vg = bl_obj.vertex_groups.new(name=str(bone_index))
+        for vertex_index, weight_value in data:
+            vg.add((vertex_index,), weight_value, "ADD")
 
 
 def build_blender_armature(mod, bl_object_parent):
@@ -180,6 +198,7 @@ def build_blender_armature(mod, bl_object_parent):
 
     blender_bones = []
     scale = 0.01
+    # TODO: do it at blender level
     non_deform_bone_indices = get_non_deform_bone_indices(mod)
     for i, bone in enumerate(mod.bones):
         blender_bone = armature.edit_bones.new(str(i))
@@ -200,28 +219,6 @@ def build_blender_armature(mod, bl_object_parent):
     return armature_ob
 
 
-def _get_weights_per_bone(mod, mesh, vertices_array):
-    weights_per_bone = {}
-    if not mod.header.num_bones or not hasattr(vertices_array[0], "bone_indices"):
-        return weights_per_bone
-    bone_palette = mod.bones_mapping[mesh.bone_map_index]
-    for vertex_index, vertex in enumerate(vertices_array):
-        for bi, bone_index in enumerate(vertex.bone_indices):
-            if bone_index >= bone_palette.unk_01:
-                real_bone_index = mod.bones_animation_mapping[bone_index]
-            else:
-                try:
-                    real_bone_index = mod.bones_mapping[mesh.bone_map_index].indices[bone_index]
-                except IndexError:
-                    # Behaviour not observed in original files so far
-                    real_bone_index = bone_index
-            if bone_index + vertex.weight_values[bi] == 0:
-                continue
-            bone_data = weights_per_bone.setdefault(real_bone_index, [])
-            bone_data.append((vertex_index, vertex.weight_values[bi] / 255))
-    return weights_per_bone
-
-
 def get_non_deform_bone_indices(mod):
     bone_indices = {i for i, _ in enumerate(mod.bones)}
 
@@ -240,15 +237,3 @@ def get_non_deform_bone_indices(mod):
                 active_bone_indices.add(real_bone_index)
 
     return bone_indices.difference(active_bone_indices)
-
-
-def transform_vertices_from_bbox(vertex_format, mod):
-    x = vertex_format.position.x
-    y = vertex_format.position.y
-    z = vertex_format.position.z
-
-    x = x / 32767 * (mod.header.bbox_max.x - mod.header.bbox_min.x) + mod.header.bbox_min.x
-    y = y / 32767 * (mod.header.bbox_max.y - mod.header.bbox_min.y) + mod.header.bbox_min.y
-    z = z / 32767 * (mod.header.bbox_max.z - mod.header.bbox_min.z) + mod.header.bbox_min.z
-
-    return (x, y, z)
