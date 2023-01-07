@@ -243,8 +243,8 @@ class Mod156(KaitaiStruct):
             self.unk_03 = self._io.read_u1()
             self.unk_flags = self._io.read_u1()
             self.num_vertices = self._io.read_u2le()
-            self.vertex_index_end = self._io.read_u2le()
-            self.vertex_index_start_1 = self._io.read_u4le()
+            self.vertex_position_end = self._io.read_u2le()
+            self.vertex_position_2 = self._io.read_u4le()
             self.vertex_offset = self._io.read_u4le()
             self.unk_05 = self._io.read_u4le()
             self.face_position = self._io.read_u4le()
@@ -252,7 +252,7 @@ class Mod156(KaitaiStruct):
             self.face_offset = self._io.read_u4le()
             self.unk_06 = self._io.read_u1()
             self.unk_07 = self._io.read_u1()
-            self.vertex_index_start_2 = self._io.read_u2le()
+            self.vertex_position = self._io.read_u2le()
             self.vertex_group_count = self._io.read_u1()
             self.bone_map_index = self._io.read_u1()
             self.unk_08 = self._io.read_u1()
@@ -280,7 +280,7 @@ class Mod156(KaitaiStruct):
                 return self._m_vertices if hasattr(self, '_m_vertices') else None
 
             _pos = self._io.pos()
-            self._io.seek(((self._root.header.offset_buffer_vertices + (self.vertex_index_start_2 * self.vertex_stride)) + self.vertex_offset))
+            self._io.seek(((self._root.header.offset_buffer_vertices + (self.vertex_position * self.vertex_stride)) + self.vertex_offset))
             self._m_vertices = [None] * (self.num_vertices)
             for i in range(self.num_vertices):
                 _on = self.vertex_format

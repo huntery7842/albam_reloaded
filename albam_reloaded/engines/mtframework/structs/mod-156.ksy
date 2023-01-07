@@ -120,16 +120,16 @@ types:
       - {id: unk_03, type: u1}
       - {id: unk_flags, type: u1} # TODO: there's one known: cast_shadows
       - {id: num_vertices, type: u2}
-      - {id: vertex_index_end, type: u2} # TODO: better name
-      - {id: vertex_index_start_1, type: u4}
+      - {id: vertex_position_end, type: u2}
+      - {id: vertex_position_2, type: u4}
       - {id: vertex_offset, type: u4}
       - {id: unk_05, type: u4}
-      - {id: face_position, type: u4} # TODO: better name
+      - {id: face_position, type: u4}
       - {id: face_count, type: u4}
       - {id: face_offset, type: u4}
       - {id: unk_06, type: u1}
       - {id: unk_07, type: u1}
-      - {id: vertex_index_start_2, type: u2}
+      - {id: vertex_position, type: u2}
       - {id: vertex_group_count, type: u1}
       - {id: bone_map_index, type: u1}
       - {id: unk_08, type: u1}
@@ -143,7 +143,10 @@ types:
         repeat-expr: face_count
         type: u2
       vertices:
-        pos: _root.header.offset_buffer_vertices + (vertex_index_start_2 * vertex_stride) + vertex_offset
+        # XXX vertex_position and vertex_position_2 are equal most of the time
+        # But if using vertex_position_2 when they are not, vertices import wrongly
+        # needs investigation
+        pos: _root.header.offset_buffer_vertices + (vertex_position * vertex_stride) + vertex_offset
         repeat: expr
         repeat-expr: num_vertices # TODO: special case
         type:

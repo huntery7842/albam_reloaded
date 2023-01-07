@@ -4,7 +4,6 @@ import bpy
 
 def strip_triangles_to_triangles_list(strip_indices_array):
     indices = []
-    offset = min(strip_indices_array)
 
     for i in range(2, len(strip_indices_array)):
         a = strip_indices_array[i - 2]
@@ -12,9 +11,9 @@ def strip_triangles_to_triangles_list(strip_indices_array):
         c = strip_indices_array[i]
         if a != b and a != c and b != c:
             if i % 2 == 0:
-                indices.extend((a - offset, b - offset, c - offset))
+                indices.extend((a, b, c))
             else:
-                indices.extend((c - offset, b - offset, a - offset))
+                indices.extend((c, b, a))
     if not indices:
         return list(strip_indices_array)
     return indices

@@ -71,6 +71,8 @@ def build_blender_mesh(mod, mesh, name, use_tri_strips=False):
         _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone)
 
     indices = strip_triangles_to_triangles_list(mesh.indices) if use_tri_strips else mesh.indices
+    # convert indices for this mesh only, so they start at zero
+    indices = [tri_idx - mesh.vertex_position for tri_idx in indices]
     assert min(indices) >= 0, "Bad face indices"  # Blender crashes if not
 
     me_ob.from_pydata(locations, [], chunks(indices, 3))
