@@ -12,7 +12,7 @@ seq:
   - {id: inverse_bind_matrices, type: matrix4x4, repeat: expr, repeat-expr: header.num_bones}
   - {id: bone_map, size: 256, if: header.num_bones != 0}
   - {id: groups, type: group, repeat: expr, repeat-expr: header.num_groups}
-  - {id: material_names, type: str, encoding: ascii, size: 128, repeat: expr, repeat-expr: header.num_material_names, if: header.version == 210}
+  - {id: material_names, type: str, encoding: ascii, size: 128, terminator: 0, repeat: expr, repeat-expr: header.num_material_names, if: header.version == 210}
   - {id: material_hashes, type: u4, repeat: expr, repeat-expr: header.num_material_hashes, if: header.version == 211}
   - {id: meshes, type: mesh, repeat: expr, repeat-expr: header.num_meshes}
   - {id: num_weight_bounds_211, type: u4, if: header.version == 211}

@@ -1,3 +1,4 @@
+from enum import Enum
 import io
 import os
 from pathlib import PureWindowsPath
@@ -9,18 +10,67 @@ from kaitaistruct import KaitaiStream
 from albam_reloaded.lib.dds import DDSHeader
 from . import EXTENSION_TO_FILE_ID
 from .structs.tex_112 import Tex112
+from .structs.tex_157 import Tex157
+from .structs.mrl import Mrl
 
 
-def build_blender_materials(arc, mod, name_prefix="material"):
-    if mod.header.version != 156:
-        return {}
-    textures = build_blender_textures(arc, mod)
+TEX_FORMAT_MAPPER = {
+    19: b'DXT1',
+    20: b'DXT1',
+    23: b'DXT5',
+    24: b'DXT5',
+    24: b'DXT5',
+    25: b'DXT5',
+    31: b'DXT5',
+    'DXT1': b'DXT1',
+    'DXT5': b'DXT5',
+}
+
+
+TEX_VERSION_MAPPER = {
+    156: Tex112,
+    210: Tex157,
+}
+
+
+class TextureTypes(Enum):
+    DIFFUSE = 1
+    NORMAL = 2
+    SPECULAR = 3
+    LIGHTMAP = 4
+    UNK_01 = 5
+    ALPHAMAP = 6
+    ENVMAP = 7
+    NORMAL_DETAIL = 8
+
+
+TEX_TYPE_MAPPER = {
+    0x345dcdc3: TextureTypes.DIFFUSE,  # RER
+    0x349dcdc3: TextureTypes.DIFFUSE,  # RE1
+    0x347dcdc3: TextureTypes.DIFFUSE,  # RE6
+    0x350dcdc3: TextureTypes.DIFFUSE,  # RE0
+    0x34cdcdc3: TextureTypes.NORMAL,  # RE1
+    0x34adcdc3: TextureTypes.NORMAL,  # RE6
+    0x353dcdc3: TextureTypes.NORMAL,  # RE0
+}
+
+
+def build_blender_materials(arc, mod, name_prefix="material", mod_file_entry=None):
     materials = {}
+    mrl = _infer_mrl(arc, mod_file_entry)
+    if mod.header.version != 156 and not mrl:
+        return materials
+
+    textures = build_blender_textures(arc, mod, mrl)
+    if mod.header.version == 156:
+        src_materials = mod.materials
+    else:
+        src_materials = mrl.materials
 
     if not bpy.data.node_groups.get("MT Framework shader"):
         _create_shader_node_group()
 
-    for idx_material, material in enumerate(mod.materials):
+    for idx_material, material in enumerate(src_materials):
         blender_material = bpy.data.materials.new(f"{name_prefix}_{str(idx_material).zfill(2)}")
         blender_material.use_nodes = True
         # set transparency method 'OPAQUE', 'CLIP', 'HASHED', 'BLEND'
@@ -34,44 +84,56 @@ def build_blender_materials(arc, mod, name_prefix="material"):
         shader_node_group.width = 300
         material_output = blender_material.node_tree.nodes.get("Material Output")
         material_output.location = (400, 0)
-
         link = blender_material.node_tree.links.new
         link(shader_node_group.outputs[0], material_output.inputs[0])
-        materials[idx_material] = blender_material
 
-        texture_slots = [
-            'texture_slot_diffuse',
-            'texture_slot_normal',
-            'texture_slot_specular',
-            'texture_slot_lightmap',
-            'texture_slot_unk_01',
-            'texture_slot_alphamap',
-            'texture_slot_envmap',
-            'texture_slot_normal_detail',
-        ]
-        for texture_code, slot_name in enumerate(texture_slots, start=1):
-            tex_index = getattr(material, slot_name, 0)
-            if tex_index == 0:
-                continue
-            try:
-                texture_target = textures[tex_index]
-            except IndexError:
-                print(f"tex_index {tex_index} not found. Texture len(): {len(textures)}")
-                continue
-            if not texture_target:
-                # This means the conversion failed before
-                continue
-            if texture_code == 6:
-                print("texture_code not supported", texture_code)
-                continue
-            texture_node = blender_material.node_tree.nodes.new("ShaderNodeTexImage")
-            texture_code_to_blender_texture(texture_code, texture_node, blender_material)
-            texture_node.image = texture_target
-            # change color settings for normal and detail maps
-            if texture_code == 2 or texture_code == 8:
-                texture_node.image.colorspace_settings.name = "Non-Color"
+        _assign_textures(material, blender_material, textures, from_mrl=bool(mrl))
+
+        if not bool(mrl):
+            materials[idx_material] = blender_material
+        else:
+            materials[material.name_hash_crcjam32] = blender_material
 
     return materials
+
+
+def _assign_textures(mtfw_material, bl_material, textures, from_mrl=False):
+
+    for texture_type in TextureTypes:
+
+        tex_index = _find_texture_index(mtfw_material, texture_type, from_mrl)
+        if tex_index == 0:
+            continue
+        try:
+            texture_target = textures[tex_index]
+        except IndexError:
+            print(f"tex_index {tex_index} not found. Texture len(): {len(textures)}")
+            continue
+        if texture_target is None:
+            # This means the conversion failed before
+            continue
+        if texture_type.value == 6:
+            print("texture_type not supported", texture_type)
+            continue
+        texture_node = bl_material.node_tree.nodes.new("ShaderNodeTexImage")
+        texture_code_to_blender_texture(texture_type.value, texture_node, bl_material)
+        texture_node.image = texture_target
+        # change color settings for normal and detail maps
+        if texture_type.value == 2 or texture_type.value == 8:
+            texture_node.image.colorspace_settings.name = "Non-Color"
+
+
+def _find_texture_index(mtfw_material, texture_type, from_mrl=False):
+    tex_index = 0
+
+    if from_mrl is False:
+        tex_index = mtfw_material.texture_slots[texture_type.value - 1]
+    else:
+        for resource in mtfw_material.resources:
+            if TEX_TYPE_MAPPER.get(resource.resource_type) == texture_type:
+                tex_index = resource.resource_index
+                break
+    return tex_index
 
 
 def _get_path_to_albam():
@@ -84,26 +146,30 @@ def _get_path_to_albam():
             pass
 
 
-def build_blender_textures(arc, mod):
+def build_blender_textures(arc, mod, mrl=None):
     textures = [None]  # materials refer to textures in index-1
     tex_type = EXTENSION_TO_FILE_ID['tex']
 
-    for i, raw_texture_path in enumerate(mod.textures):
-        # TODO: raw_texture path in bytes?
-        texture_path = raw_texture_path.partition('\x00')[0]
+    src_textures = getattr(mod, 'textures', None) or getattr(mrl, 'textures', None)
+    if not src_textures:
+        return textures
+    TexCls = TEX_VERSION_MAPPER[mod.header.version]
+
+    for i, texture_slot in enumerate(src_textures):
+        texture_path = getattr(texture_slot, 'texture_path', None) or texture_slot
         tex_buffer = arc.get_file(texture_path, tex_type)
         if not tex_buffer:
             print(f'texture_path {texture_path} not found in arc')
+            textures.append(None)
             # TODO: handle missing texture
             continue
-
-        tex = Tex112(KaitaiStream(io.BytesIO(tex_buffer)))
+        tex = TexCls(KaitaiStream(io.BytesIO(tex_buffer)))
         try:
             dds_header = DDSHeader(
                 dwHeight=tex.height,
                 dwWidth=tex.width,
                 dwMipMapCount=tex.num_mipmaps,
-                pixelfmt_dwFourCC=tex.format.encode(),
+                pixelfmt_dwFourCC=TEX_FORMAT_MAPPER[tex.format],
             )
             dds_header.set_constants()
             dds_header.set_variables()
@@ -421,8 +487,24 @@ def blender_texture_to_texture_code(blender_texture_image_node):
     texture_code = tex_codes_mapper.get(socket_name)
     if texture_code is None:
         return None
-
     return texture_code
+
+
+def _infer_mrl(arc, mod_file_entry):
+    """
+    Assuming mrl file is next to the .mod file with
+    the same name.
+    It's not always like this, e.g. RE6
+    """
+    if not mod_file_entry:
+        return
+    mrl_type = EXTENSION_TO_FILE_ID['mrl']
+
+    mrl_file = arc.get_file(mod_file_entry.file_path, mrl_type)
+    if not mrl_file:
+        return
+    mrl = Mrl(KaitaiStream(io.BytesIO(mrl_file)))
+    return mrl
 
 
 def _handle_missing_texture(path, index):

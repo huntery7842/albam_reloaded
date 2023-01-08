@@ -1,3 +1,4 @@
+from binascii import crc32
 from collections import namedtuple
 import io
 from struct import unpack
@@ -34,7 +35,7 @@ def build_blender_model(arc, mod_file_entry):
     mod = Mod(KaitaiStream(io.BytesIO(mod_buffer)))
     bbox_data = _create_bbox_data(mod)
     skeleton = build_blender_armature(mod, bl_mod_container)
-    materials = build_blender_materials(arc, mod, bl_mod_container_name)
+    materials = build_blender_materials(arc, mod, bl_mod_container_name, mod_file_entry)
     meshes_parent = skeleton or bl_mod_container
 
     for i, mesh in enumerate(m for m in mod.meshes if m.level_of_detail in LODS_TO_IMPORT):
@@ -46,10 +47,11 @@ def build_blender_model(arc, mod_file_entry):
                 modifier = bl_mesh_ob.modifiers.new(type="ARMATURE", name="armature")
                 modifier.object = meshes_parent
                 modifier.use_vertex_groups = True
-            if materials.get(mesh.idx_material):
-                bl_mesh_ob.data.materials.append(materials[mesh.idx_material])
+            material_hash = _get_material_hash(mod, mesh)
+            if materials.get(material_hash):
+                bl_mesh_ob.data.materials.append(materials[material_hash])
             else:
-                print(f"[{bl_mod_container_name}] material {mesh.idx_material} not found")
+                print(f"[{bl_mod_container_name}] material {material_hash} not found")
 
         except Exception as err:
             print(f'[{bl_mod_container_name}] error building mesh {i} {err}')
@@ -297,3 +299,13 @@ def get_non_deform_bone_indices(mod):
                 active_bone_indices.add(real_bone_index)
 
     return bone_indices.difference(active_bone_indices)
+
+
+def _get_material_hash(mod, mesh):
+    material_hash = None
+    if mod.header.version == 156:
+        material_hash = mesh.idx_material
+    elif mod.header.version == 210:
+        material_name = mod.material_names[mesh.idx_material // 16]
+        material_hash = crc32(material_name.encode()) ^ 0xFFFFFFFF
+    return material_hash

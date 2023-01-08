@@ -97,14 +97,7 @@ types:
       - {id: unk_01, type: u2}
       - {id: unk_flags, type: u2}
       - {id: unk_shorts, type: u2, repeat: expr, repeat-expr: 10}
-      - {id: texture_slot_diffuse, type: u4}
-      - {id: texture_slot_normal, type: u4}
-      - {id: texture_slot_specular, type: u4}
-      - {id: texture_slot_lightmap, type: u4}
-      - {id: texture_slot_unk_01, type: u4}
-      - {id: texture_slot_alphamap, type: u4}
-      - {id: texture_slot_envmap, type: u4}
-      - {id: texture_slot_normal_detail, type: u4}
+      - {id: texture_slots, type: u4, repeat: expr, repeat-expr: 8}
       - {id: unk_floats, type: f4, repeat: expr, repeat-expr: 26}
 
   mesh:

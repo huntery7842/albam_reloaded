@@ -321,14 +321,10 @@ class Mod156(KaitaiStruct):
             for i in range(10):
                 self.unk_shorts[i] = self._io.read_u2le()
 
-            self.texture_slot_diffuse = self._io.read_u4le()
-            self.texture_slot_normal = self._io.read_u4le()
-            self.texture_slot_specular = self._io.read_u4le()
-            self.texture_slot_lightmap = self._io.read_u4le()
-            self.texture_slot_unk_01 = self._io.read_u4le()
-            self.texture_slot_alphamap = self._io.read_u4le()
-            self.texture_slot_envmap = self._io.read_u4le()
-            self.texture_slot_normal_detail = self._io.read_u4le()
+            self.texture_slots = [None] * (8)
+            for i in range(8):
+                self.texture_slots[i] = self._io.read_u4le()
+
             self.unk_floats = [None] * (26)
             for i in range(26):
                 self.unk_floats[i] = self._io.read_f4le()

@@ -39,7 +39,7 @@ class Mod21(KaitaiStruct):
         if self.header.version == 210:
             self.material_names = [None] * (self.header.num_material_names)
             for i in range(self.header.num_material_names):
-                self.material_names[i] = (self._io.read_bytes(128)).decode(u"ascii")
+                self.material_names[i] = (KaitaiStream.bytes_terminate(self._io.read_bytes(128), 0, False)).decode(u"ascii")
 
 
         if self.header.version == 211:
@@ -484,10 +484,11 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo = [None] * (12)
-            for i in range(12):
-                self.todo[i] = self._io.read_u1()
+            self.todo_1 = [None] * (8)
+            for i in range(8):
+                self.todo_1[i] = self._io.read_u1()
 
+            self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
 
 
 
