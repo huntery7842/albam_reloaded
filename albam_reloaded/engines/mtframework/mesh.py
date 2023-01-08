@@ -145,6 +145,8 @@ def _process_uvs(vertex, uvs_1_out, uvs_2_out, uvs_3_out):
 def _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone):
     if not hasattr(vertex, "bone_indices"):
         return
+    if mod.header.version != 156:
+        return
 
     bone_palette = mod.bones_mapping[mesh.bone_map_index]
     for bi, bone_index in enumerate(vertex.bone_indices):

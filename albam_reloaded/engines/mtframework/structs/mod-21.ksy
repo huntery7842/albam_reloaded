@@ -55,7 +55,6 @@ types:
       - {id: unk_04, type: u4}
       - {id: num_weight_bounds_210, type: u4, if: version == 210}
 
-
   mesh:
     seq:
       - {id: idx_group, type: u2}
@@ -105,12 +104,20 @@ types:
   vertex_14d4: # 28
     seq:
       - {id: position, type: vec4_s2}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 20}
+      - {id: unk_01, type: u1, repeat: expr, repeat-expr: 8}
+      - {id: bone_indices, type: u1, repeat: expr, repeat-expr: 4}
+      - {id: uv, type: vec2_half_float}
+      - {id: weight_values, type: vec2_half_float}
 
   vertex_2f55: # 64
     seq:
       - {id: position, type: vec4_s2}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 56}
+      - {id: unk_01, type: u1, repeat: expr, repeat-expr: 8}
+      - {id: bone_indices, type: u1, repeat: expr, repeat-expr: 4}
+      - {id: uv, type: vec2_half_float}
+       # first weight in position.w, 4th is remaining until 1.0
+      - {id: weight_values, type: vec2_half_float}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 36}
 
   vertex_a320: # 28
     seq:
@@ -120,7 +127,8 @@ types:
   vertex_a8fa: # 20
     seq:
       - {id: position, type: vec4_s2}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 12}
+      - {id: todo_1, type: u1, repeat: expr, repeat-expr: 8}
+      - {id: uv, type: vec2_half_float}
 
   vertex_b098: # 12
     seq:
@@ -130,18 +138,26 @@ types:
   vertex_bb42: # 36
     seq:
       - {id: position, type: vec4_s2}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 28}
+      - {id: todo_1, type: u1, repeat: expr, repeat-expr: 12}
+        # FIXME: doesn't seem to work
+      - {id: uv, type: vec2_half_float}
+      - {id: todo_2, type: u1, repeat: expr, repeat-expr: 12}
 
   vertex_c31f2: # 24
     seq:
       - {id: position, type: vec4_s2}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 16}
+      - {id: todo_1, type: u1, repeat: expr, repeat-expr: 8}
+      - {id: uv, type: vec2_half_float}
+      - {id: todo, type: u1, repeat: expr, repeat-expr: 4}
+
   vertex_cb68: # 20
     seq:
       - {id: position, type: vec4_s2}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 12}
+      - {id: todo_1, type: u1, repeat: expr, repeat-expr: 8}
+      # FIXME: line meshes, don't seem to need uv/no valid uvs
+      - {id: uv, type: vec2_half_float}
 
-  vertex_db7d: # 16
+  vertex_db7d: # 16, line meshes don't seem to contain UVs
     seq:
       - {id: position, type: vec4_s2}
       - {id: todo, type: u1, repeat: expr, repeat-expr: 8}
