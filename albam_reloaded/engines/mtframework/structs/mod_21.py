@@ -150,9 +150,13 @@ class Mod21(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo_1 = [None] * (8)
-            for i in range(8):
+            self.position = Mod21.Vec3S2(self._io, self, self._root)
+            self.bone_indices = [None] * (1)
+            for i in range(1):
+                self.bone_indices[i] = self._io.read_u1()
+
+            self.todo_1 = [None] * (9)
+            for i in range(9):
                 self.todo_1[i] = self._io.read_u1()
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
@@ -207,26 +211,6 @@ class Mod21(KaitaiStruct):
 
 
 
-    class VertexC31f2(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo_1 = [None] * (8)
-            for i in range(8):
-                self.todo_1[i] = self._io.read_u1()
-
-            self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.todo = [None] * (4)
-            for i in range(4):
-                self.todo[i] = self._io.read_u1()
-
-
-
     class Bone(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -262,10 +246,33 @@ class Mod21(KaitaiStruct):
                 self.bone_indices[i] = self._io.read_u1()
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.weight_values = Mod21.Vec2HalfFloat(self._io, self, self._root)
+            self.weight_values = [None] * (2)
+            for i in range(2):
+                self.weight_values[i] = self._io.read_bytes(2)
+
             self.todo = [None] * (36)
             for i in range(36):
                 self.todo[i] = self._io.read_u1()
+
+
+
+    class VertexC31f(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.position = Mod21.Vec4S2(self._io, self, self._root)
+            self.todo_1 = [None] * (8)
+            for i in range(8):
+                self.todo_1[i] = self._io.read_u1()
+
+            self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
+            self.bone_indices = [None] * (2)
+            for i in range(2):
+                self.bone_indices[i] = self._io.read_bytes(2)
 
 
 
@@ -287,7 +294,10 @@ class Mod21(KaitaiStruct):
                 self.bone_indices[i] = self._io.read_u1()
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.weight_values = Mod21.Vec2HalfFloat(self._io, self, self._root)
+            self.weight_values = [None] * (2)
+            for i in range(2):
+                self.weight_values[i] = self._io.read_bytes(2)
+
 
 
     class Mesh(KaitaiStruct):
@@ -347,7 +357,7 @@ class Mod21(KaitaiStruct):
                 if _on == 794148925:
                     self._m_vertices[i] = Mod21.Vertex2f55(self._io, self, self._root)
                 elif _on == 3273596956:
-                    self._m_vertices[i] = Mod21.VertexC31f2(self._io, self, self._root)
+                    self._m_vertices[i] = Mod21.VertexC31f(self._io, self, self._root)
                 elif _on == 3141681188:
                     self._m_vertices[i] = Mod21.VertexBb42(self._io, self, self._root)
                 elif _on == 2835001368:
@@ -441,6 +451,19 @@ class Mod21(KaitaiStruct):
             for i in range(20):
                 self.todo[i] = self._io.read_u1()
 
+
+
+    class Vec3S2(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.x = self._io.read_s2le()
+            self.y = self._io.read_s2le()
+            self.z = self._io.read_s2le()
 
 
     class Vec4S2(KaitaiStruct):

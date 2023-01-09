@@ -97,7 +97,7 @@ types:
             0xa8fab018: vertex_a8fa
             0xb0983013: vertex_b098
             0xbb424024: vertex_bb42
-            0xc31f201c: vertex_c31f2
+            0xc31f201c: vertex_c31f
             0xcb68015: vertex_cb68
             0xdb7da014: vertex_db7d
 
@@ -107,7 +107,7 @@ types:
       - {id: unk_01, type: u1, repeat: expr, repeat-expr: 8}
       - {id: bone_indices, type: u1, repeat: expr, repeat-expr: 4}
       - {id: uv, type: vec2_half_float}
-      - {id: weight_values, type: vec2_half_float}
+      - {id: weight_values, size: 2, repeat: expr, repeat-expr: 2}  # half-float
 
   vertex_2f55: # 64
     seq:
@@ -116,18 +116,20 @@ types:
       - {id: bone_indices, type: u1, repeat: expr, repeat-expr: 4}
       - {id: uv, type: vec2_half_float}
        # first weight in position.w, 4th is remaining until 1.0
-      - {id: weight_values, type: vec2_half_float}
+      - {id: weight_values, size: 2, repeat: expr, repeat-expr: 2}  # half-float
       - {id: todo, type: u1, repeat: expr, repeat-expr: 36}
 
   vertex_a320: # 28
     seq:
       - {id: position, type: vec4_s2}
+      # TODO: weights
       - {id: todo, type: u1, repeat: expr, repeat-expr: 20}
 
   vertex_a8fa: # 20
     seq:
-      - {id: position, type: vec4_s2}
-      - {id: todo_1, type: u1, repeat: expr, repeat-expr: 8}
+      - {id: position, type: vec3_s2}
+      - {id: bone_indices, type: u1, repeat: expr, repeat-expr: 1}
+      - {id: todo_1, type: u1, repeat: expr, repeat-expr: 9}
       - {id: uv, type: vec2_half_float}
 
   vertex_b098: # 12
@@ -143,12 +145,13 @@ types:
       - {id: uv, type: vec2_half_float}
       - {id: todo_2, type: u1, repeat: expr, repeat-expr: 12}
 
-  vertex_c31f2: # 24
+  vertex_c31f: # 24
     seq:
       - {id: position, type: vec4_s2}
       - {id: todo_1, type: u1, repeat: expr, repeat-expr: 8}
       - {id: uv, type: vec2_half_float}
-      - {id: todo, type: u1, repeat: expr, repeat-expr: 4}
+      # TODO: review bone_indices
+      - {id: bone_indices, size: 2, repeat: expr, repeat-expr: 2}
 
   vertex_cb68: # 20
     seq:
@@ -185,6 +188,12 @@ types:
       - {id: y, type: s2}
       - {id: z, type: s2}
       - {id: w, type: s2}
+
+  vec3_s2:
+    seq:
+      - {id: x, type: s2}
+      - {id: y, type: s2}
+      - {id: z, type: s2}
 
   matrix4x4:
     seq:

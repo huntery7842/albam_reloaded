@@ -34,7 +34,7 @@ def build_blender_model(arc, mod_file_entry):
     Mod = MOD_CLASS_MAPPER[mod_version]
     mod = Mod(KaitaiStream(io.BytesIO(mod_buffer)))
     bbox_data = _create_bbox_data(mod)
-    skeleton = build_blender_armature(mod, bl_mod_container)
+    skeleton = build_blender_armature(mod, bl_mod_container, bbox_data)
     materials = build_blender_materials(arc, mod, bl_mod_container_name, mod_file_entry)
     meshes_parent = skeleton or bl_mod_container
 
@@ -104,7 +104,7 @@ def _process_locations(mod_version, vertex, vertices_out, bbox_data):
         y = y / 32767 * bbox_data.height + bbox_data.min_y
         z = z / 32767 * bbox_data.depth + bbox_data.min_z
 
-    elif w is not None and mod_version == 210:
+    elif mod_version == 210:
         x = x / 32767 * bbox_data.dimension + bbox_data.min_x
         y = y / 32767 * bbox_data.dimension + bbox_data.min_y
         z = z / 32767 * bbox_data.dimension + bbox_data.min_z
@@ -147,25 +147,66 @@ def _process_uvs(vertex, uvs_1_out, uvs_2_out, uvs_3_out):
 def _process_weights(mod, mesh, vertex, vertex_index, weights_per_bone):
     if not hasattr(vertex, "bone_indices"):
         return
-    if mod.header.version != 156:
-        return
 
-    bone_palette = mod.bones_mapping[mesh.bone_map_index]
-    for bi, bone_index in enumerate(vertex.bone_indices):
-        if bone_index >= bone_palette.unk_01:
-            real_bone_index = mod.bones_animation_mapping[bone_index]
-        else:
-            try:
-                real_bone_index = mod.bones_mapping[mesh.bone_map_index].indices[bone_index]
-            except IndexError:
-                # Behaviour not observed in original files so far
-                real_bone_index = bone_index
-        if bone_index + vertex.weight_values[bi] == 0:
-            continue
-        bone_data = weights_per_bone.setdefault(real_bone_index, [])
-        bone_data.append((vertex_index, vertex.weight_values[bi] / 255))
+    bone_indices = _get_bone_indices(mod, mesh, vertex.bone_indices)
+    weights = _get_weights(mod, mesh, vertex)
+
+    for bi, bone_index in enumerate(bone_indices):
+        bone_data = weights_per_bone.setdefault(bone_index, [])
+        bone_data.append((vertex_index, weights[bi]))
 
     return weights_per_bone
+
+
+def _get_bone_indices(mod, mesh, bone_indices):
+    mapped_bone_indices = []
+
+    if mod.header.version == 156:
+        bone_palette = mod.bones_mapping[mesh.bone_map_index]
+        for bi, bone_index in enumerate(bone_indices):
+            if bone_index >= bone_palette.unk_01:
+                real_bone_index = mod.bones_animation_mapping[bone_index]
+            else:
+                try:
+                    real_bone_index = mod.bones_mapping[mesh.bone_map_index].indices[bone_index]
+                except IndexError:
+                    # Behaviour not observed in original files so far
+                    real_bone_index = bone_index
+            mapped_bone_indices.append(real_bone_index)
+    elif mesh.vertex_format == 0xc31f201c:
+        b1 = int(unpack('e', bone_indices[0])[0])
+        b2 = int(unpack('e', bone_indices[0])[0])
+        mapped_bone_indices.extend((b1, b2))
+
+    else:
+        mapped_bone_indices = bone_indices
+
+    return mapped_bone_indices
+
+
+def _get_weights(mod, mesh, vertex):
+    if mod.header.version == 156:
+        return [w / 255 for w in vertex.weight_values]
+
+    # Assuming all vertex formats share this pattern.
+    # TODO: verify
+    if len(vertex.bone_indices) == 1:
+        return (1.0,)
+
+    elif mesh.vertex_format in (0x14d40020, 0x2f55c03d,):
+        w1 = vertex.position.w / 32767
+        w2 = unpack('e', bytes(vertex.weight_values[0]))[0]
+        w3 = unpack('e', bytes(vertex.weight_values[1]))[0]
+        w4 = 1.0 - w1 - w2 - w3
+        return (w1, w2, w3, w4)
+
+    elif mesh.vertex_format in (0xc31f201c,):
+        w1 = vertex.position.w / 32767
+        w2 = 1.0 - w1
+        return (w1, w2)
+    else:
+        print(f"Can't get weights for vertex_format '{mesh.vertex_format}'")
+        return (0, 0, 0, 0)
 
 
 def _build_normals(bl_mesh, normals):
@@ -195,15 +236,15 @@ def _build_uvs(bl_mesh, uvs, name='uv'):
 
 
 def _build_weights(bl_obj, weights_per_bone):
+    if not weights_per_bone:
+        return
     for bone_index, data in weights_per_bone.items():
         vg = bl_obj.vertex_groups.new(name=str(bone_index))
         for vertex_index, weight_value in data:
             vg.add((vertex_index,), weight_value, "ADD")
 
 
-def build_blender_armature(mod, bl_object_parent):
-    if mod.header.version != 156:
-        return
+def build_blender_armature(mod, bl_object_parent, bbox_data):
     armature_name = bl_object_parent.name + "_skel"
     armature = bpy.data.armatures.new(armature_name)
     armature_ob = bpy.data.objects.new(armature_name, armature)
@@ -222,24 +263,47 @@ def build_blender_armature(mod, bl_object_parent):
     blender_bones = []
     scale = 0.01
     # TODO: do it at blender level
-    non_deform_bone_indices = get_non_deform_bone_indices(mod)
+    # non_deform_bone_indices = get_non_deform_bone_indices(mod)
     for i, bone in enumerate(mod.bones):
         blender_bone = armature.edit_bones.new(str(i))
         blender_bone.parent = blender_bones[bone.idx_parent] if i != 0 else None
-        blender_bone.use_deform = False if i in non_deform_bone_indices else True
+        # blender_bone.use_deform = False if i in non_deform_bone_indices else True
         m = mod.inverse_bind_matrices[i]
-        head = Matrix((
-            (m.row_1.x, m.row_1.y, m.row_1.z, m.row_1.w),
-            (m.row_2.x, m.row_2.y, m.row_2.z, m.row_2.w),
-            (m.row_3.x, m.row_3.y, m.row_3.z, m.row_3.w),
-            (m.row_4.x, m.row_4.y, m.row_4.z, m.row_4.w)
-        )).inverted().transposed().to_translation()
+        head = _name_me(mod, m, bbox_data)
         blender_bone.head = ([head[0] * scale, -head[2] * scale, head[1] * scale])
         blender_bone.tail = ([head[0] * scale, -head[2] * scale, (head[1] * scale) + 0.01])
         blender_bones.append(blender_bone)
 
     bpy.ops.object.mode_set(mode="OBJECT")
     return armature_ob
+
+
+def _name_me(mod, matrix, bbox_data):
+    m = matrix
+    if mod.header.version == 210:
+        row_1_x = round(m.row_1.x - bbox_data.dimension + 1, 1)
+        row_2_y = round(m.row_2.y - bbox_data.dimension + 1, 1)
+        row_3_z = round(m.row_3.z - bbox_data.dimension + 1, 1)
+        row_4_x = m.row_4.x - bbox_data.min_x
+        row_4_y = m.row_4.y - bbox_data.min_y
+        row_4_z = m.row_4.z - bbox_data.min_z
+
+    elif mod.header.version == 156:
+        row_1_x = m.row_1.x
+        row_2_y = m.row_2.y
+        row_3_z = m.row_3.z
+        row_4_x = m.row_4.x
+        row_4_y = m.row_4.y
+        row_4_z = m.row_4.z
+
+    head_vector = Matrix((
+        (row_1_x, m.row_1.y, m.row_1.z, m.row_1.w),
+        (m.row_2.x, row_2_y, m.row_2.z, m.row_2.w),
+        (m.row_3.x, m.row_3.y, row_3_z, m.row_3.w),
+        (row_4_x, row_4_y, row_4_z, m.row_4.w)
+    )).inverted().transposed().to_translation()
+
+    return head_vector
 
 
 def _create_bbox_data(mod):
@@ -279,26 +343,6 @@ def _create_bbox_data(mod):
     )
 
     return bbox_data
-
-
-def get_non_deform_bone_indices(mod):
-    bone_indices = {i for i, _ in enumerate(mod.bones)}
-
-    active_bone_indices = set()
-
-    for mesh_index, mesh in enumerate(mod.meshes):
-        for vi, vert in enumerate(mesh.vertices):
-            for bone_index in getattr(vert, "bone_indices", []):
-                try:
-                    real_bone_index = mod.bones_mapping[mesh.bone_map_index].indices[
-                        bone_index
-                    ]
-                except IndexError:
-                    # Behavior not observed on original files
-                    real_bone_index = bone_index
-                active_bone_indices.add(real_bone_index)
-
-    return bone_indices.difference(active_bone_indices)
 
 
 def _get_material_hash(mod, mesh):
