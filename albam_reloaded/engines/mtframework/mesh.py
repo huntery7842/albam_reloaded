@@ -266,7 +266,8 @@ def build_blender_armature(mod, bl_object_parent, bbox_data):
     # non_deform_bone_indices = get_non_deform_bone_indices(mod)
     for i, bone in enumerate(mod.bones):
         blender_bone = armature.edit_bones.new(str(i))
-        blender_bone.parent = blender_bones[bone.idx_parent] if i != 0 else None
+        valid_parent = bone.idx_parent < 255
+        blender_bone.parent = blender_bones[bone.idx_parent] if valid_parent else None
         # blender_bone.use_deform = False if i in non_deform_bone_indices else True
         m = mod.inverse_bind_matrices[i]
         head = _name_me(mod, m, bbox_data)
