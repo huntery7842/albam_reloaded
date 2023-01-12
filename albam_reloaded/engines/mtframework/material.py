@@ -462,34 +462,6 @@ def texture_code_to_blender_texture(texture_code, blender_texture_node, blender_
         # TODO: 7 CM cubemap
 
 
-def blender_texture_to_texture_code(blender_texture_image_node):
-    """This function return a type ID of the image texture node dependind of node connetion
-    blender_texture_image_node : bpy.types.ShaderNodeTexImage
-    """
-    texture_code = None
-    color_out = blender_texture_image_node.outputs["Color"]
-    try:
-        socket_name = color_out.links[0].to_socket.name
-    except Exception:
-        print("the texture has no connections")
-        return None
-
-    tex_codes_mapper = {
-        "Diffuse BM": 0,
-        "Normal NM": 1,
-        "Specular MM": 2,
-        "Lightmap LM": 3,
-        "Alpha Mask AM": 5,
-        "Environment CM": 6,
-        "Detail DNM": 7,
-    }
-
-    texture_code = tex_codes_mapper.get(socket_name)
-    if texture_code is None:
-        return None
-    return texture_code
-
-
 def _infer_mrl(arc, mod_file_entry):
     """
     Assuming mrl file is next to the .mod file with
