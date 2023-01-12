@@ -165,7 +165,7 @@ def _get_bone_indices(mod, mesh, bone_indices):
         bone_palette = mod.bones_mapping[mesh.bone_map_index]
         for bi, bone_index in enumerate(bone_indices):
             if bone_index >= bone_palette.unk_01:
-                real_bone_index = mod.bones_animation_mapping[bone_index]
+                real_bone_index = mod.bone_map[bone_index]
             else:
                 try:
                     real_bone_index = mod.bones_mapping[mesh.bone_map_index].indices[bone_index]
