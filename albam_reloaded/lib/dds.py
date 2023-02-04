@@ -2,8 +2,7 @@ from ctypes import Structure, c_int, c_char, c_byte
 
 
 class DDSHeader(Structure):
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/bb943982
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/bb943984
+    # https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dds-header
     DDSD_CAPS = 0x1
     DDSD_HEIGHT = 0x2
     DDSD_WIDTH = 0x4
@@ -26,6 +25,11 @@ class DDSHeader(Structure):
     DDSCAPS2_CUBEMAP_NEGATIVEZ = 0x8000
     DDSCAPS2_VOLUME = 0x200000
 
+    DDPF_ALPHAPIXELS = 0x1
+    DDPF_FOURCC = 0x4
+    DDPF_RGB = 0x40
+
+
     REQUIRED_FLAGS = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT
 
     _fields_ = (
@@ -39,7 +43,7 @@ class DDSHeader(Structure):
         ("dwMipMapCount", c_int),
         ("dwReserved1", c_int * 11),
         ("pixelfmt_dwSize", c_int),
-        ("pixelfmt_dwFlags", c_byte * 4),
+        ("pixelfmt_dwFlags", c_int),
         ("pixelfmt_dwFourCC", c_char * 4),
         ("pixelfmt_dwRGBBitCount", c_int),
         ("pixelfmt_dwRBitMask", c_int),
@@ -58,18 +62,33 @@ class DDSHeader(Structure):
         self.dwSize = 124
         self.dwFlags = self.REQUIRED_FLAGS
         self.pixelfmt_dwSize = 32
-        self.pixelfmt_dwFlags = (c_byte * 4)(4, 0, 0, 0)
         self.dwCaps = self.DDSCAPS_TEXTURE
 
-    def set_variables(self):
-        self.dwPitchOrLinearSize = self.calculate_linear_size(
-            self.dwWidth, self.dwHeight, self.pixelfmt_dwFourCC
-        )
+    def set_variables(self, compressed=True):
+        try:
+            self.dwPitchOrLinearSize = self.calculate_linear_size(
+                self.dwWidth, self.dwHeight, self.pixelfmt_dwFourCC
+            )
+        except Exception:
+            print("failed to set dwPitchOrLinearSize")
+
         if self.dwMipMapCount:
             self.dwFlags |= self.DDSD_MIPMAPCOUNT
             self.dwCaps |= self.DDSCAPS_MIPMAP
         if self.dwMipMapCount:  # TODO: add 'or cubic or mipmapped_volume'
             self.dwCaps |= self.DDSCAPS_COMPLEX
+
+        if compressed:
+            self.pixelfmt_dwFlags |= self.DDPF_FOURCC
+        else:
+            self.dwPitchOrLinearSize = 256  # XXX temp
+            self.pixelfmt_dwFlags |= self.DDPF_RGB
+            self.pixelfmt_dwFlags |= self.DDPF_ALPHAPIXELS  # TODO: need without alpha?
+            self.pixelfmt_dwRGBBitCount = 32
+            self.pixelfmt_dwRBitMask = 0xFF0000
+            self.pixelfmt_dwGBitMask = 0xFF00
+            self.pixelfmt_dwBBitMask = 0xFF
+            self.pixelfmt_dwABitMask = 0xFF000000
 
     @property
     def mipmap_sizes(self):
