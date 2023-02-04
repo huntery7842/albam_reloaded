@@ -21,21 +21,27 @@ class Tex112(KaitaiStruct):
             raise kaitaistruct.ValidationNotEqualError(b"\x54\x45\x58\x00", self.id_magic, self._io, u"/seq/0")
         self.version = self._io.read_u2le()
         self.revision = self._io.read_u2le()
-        self.num_mipmaps = self._io.read_u1()
-        self.unk_01 = self._io.read_u1()
+        self.num_mipmaps_per_image = self._io.read_u1()
+        self.num_images = self._io.read_u1()
         self.unk_02 = self._io.read_u1()
         self.unk_03 = self._io.read_u1()
         self.width = self._io.read_u2le()
         self.height = self._io.read_u2le()
         self.reserved = self._io.read_u4le()
-        self.format = (self._io.read_bytes(4)).decode(u"ascii")
-        self.unk_04 = self._io.read_f4le()
-        self.unk_05 = self._io.read_f4le()
-        self.unk_06 = self._io.read_f4le()
-        self.unk_07 = self._io.read_f4le()
-        self.mipmap_offsets = [None] * (self.num_mipmaps)
-        for i in range(self.num_mipmaps):
-            self.mipmap_offsets[i] = self._io.read_u4le()
+        self.compression_format = (self._io.read_bytes(4)).decode(u"ascii")
+        self.red = self._io.read_f4le()
+        self.green = self._io.read_f4le()
+        self.blue = self._io.read_f4le()
+        self.alpha = self._io.read_f4le()
+        if self.num_images > 1:
+            self.unk_offset = [None] * (27)
+            for i in range(27):
+                self.unk_offset[i] = self._io.read_u4le()
+
+
+        self.offsets_mipmaps = [None] * ((self.num_mipmaps_per_image * self.num_images))
+        for i in range((self.num_mipmaps_per_image * self.num_images)):
+            self.offsets_mipmaps[i] = self._io.read_u4le()
 
         self.dds_data = self._io.read_bytes_full()
 
