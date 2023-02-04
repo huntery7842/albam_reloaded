@@ -1,5 +1,22 @@
+[project]
+name = "Albam"
+version = "0.3.6"
+description = "Import 3d models into Blender"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+keywords = ["blender", "blender-addon", "import", "3d models", "3d formats"]
 
-# flake8-pyproject
+[project.optional-dependencies]
+test = [
+  "black == 22.12.0",
+  "bpy == 3.4.0",
+  "flake8-pyproject == 1.2.2",
+  "pytest == 7.2.0",
+  "pytest-xdist == 3.1.0",
+  "pytest-cov[all]"
+]
+
 
 [tool.black]
 
