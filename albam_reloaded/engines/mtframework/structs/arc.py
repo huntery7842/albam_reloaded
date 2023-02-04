@@ -1,11 +1,10 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class Arc(KaitaiStruct):
@@ -21,9 +20,9 @@ class Arc(KaitaiStruct):
             raise kaitaistruct.ValidationNotEqualError(b"\x41\x52\x43\x00", self.ident, self._io, u"/seq/0")
         self.version = self._io.read_s2le()
         self.num_files = self._io.read_s2le()
-        self.file_entries = [None] * (self.num_files)
+        self.file_entries = []
         for i in range(self.num_files):
-            self.file_entries[i] = Arc.FileEntry(self._io, self, self._root)
+            self.file_entries.append(Arc.FileEntry(self._io, self, self._root))
 
 
     class FileEntry(KaitaiStruct):
@@ -45,14 +44,14 @@ class Arc(KaitaiStruct):
         @property
         def raw_data(self):
             if hasattr(self, '_m_raw_data'):
-                return self._m_raw_data if hasattr(self, '_m_raw_data') else None
+                return self._m_raw_data
 
             io = self._root._io
             _pos = io.pos()
             io.seek(self.offset)
             self._m_raw_data = io.read_bytes(self.zsize)
             io.seek(_pos)
-            return self._m_raw_data if hasattr(self, '_m_raw_data') else None
+            return getattr(self, '_m_raw_data', None)
 
 
 

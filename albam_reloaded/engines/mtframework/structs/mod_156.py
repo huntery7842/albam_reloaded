@@ -1,11 +1,10 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class Mod156(KaitaiStruct):
@@ -17,45 +16,45 @@ class Mod156(KaitaiStruct):
 
     def _read(self):
         self.header = Mod156.ModHeader(self._io, self, self._root)
-        self.bones = [None] * (self.header.num_bones)
+        self.bones = []
         for i in range(self.header.num_bones):
-            self.bones[i] = Mod156.Bone(self._io, self, self._root)
+            self.bones.append(Mod156.Bone(self._io, self, self._root))
 
-        self.parent_space_matrices = [None] * (self.header.num_bones)
+        self.parent_space_matrices = []
         for i in range(self.header.num_bones):
-            self.parent_space_matrices[i] = Mod156.Matrix4x4(self._io, self, self._root)
+            self.parent_space_matrices.append(Mod156.Matrix4x4(self._io, self, self._root))
 
-        self.inverse_bind_matrices = [None] * (self.header.num_bones)
+        self.inverse_bind_matrices = []
         for i in range(self.header.num_bones):
-            self.inverse_bind_matrices[i] = Mod156.Matrix4x4(self._io, self, self._root)
+            self.inverse_bind_matrices.append(Mod156.Matrix4x4(self._io, self, self._root))
 
         if self.header.num_bones != 0:
             self.bone_map = self._io.read_bytes(256)
 
-        self.bones_mapping = [None] * (self.header.num_bone_mappings)
+        self.bones_mapping = []
         for i in range(self.header.num_bone_mappings):
-            self.bones_mapping[i] = Mod156.BoneMapping(self._io, self, self._root)
+            self.bones_mapping.append(Mod156.BoneMapping(self._io, self, self._root))
 
-        self.groups = [None] * (self.header.num_groups)
+        self.groups = []
         for i in range(self.header.num_groups):
-            self.groups[i] = Mod156.Group(self._io, self, self._root)
+            self.groups.append(Mod156.Group(self._io, self, self._root))
 
-        self.textures = [None] * (self.header.num_textures)
+        self.textures = []
         for i in range(self.header.num_textures):
-            self.textures[i] = (KaitaiStream.bytes_terminate(self._io.read_bytes(64), 0, False)).decode(u"ascii")
+            self.textures.append((KaitaiStream.bytes_terminate(self._io.read_bytes(64), 0, False)).decode(u"ascii"))
 
-        self.materials = [None] * (self.header.num_materials)
+        self.materials = []
         for i in range(self.header.num_materials):
-            self.materials[i] = Mod156.Material(self._io, self, self._root)
+            self.materials.append(Mod156.Material(self._io, self, self._root))
 
-        self.meshes = [None] * (self.header.num_meshes)
+        self.meshes = []
         for i in range(self.header.num_meshes):
-            self.meshes[i] = Mod156.Mesh(self._io, self, self._root)
+            self.meshes.append(Mod156.Mesh(self._io, self, self._root))
 
         self.num_weight_bounds = self._io.read_u4le()
-        self.weight_bounds = [None] * (self.num_weight_bounds)
+        self.weight_bounds = []
         for i in range(self.num_weight_bounds):
-            self.weight_bounds[i] = Mod156.WeightBound(self._io, self, self._root)
+            self.weight_bounds.append(Mod156.WeightBound(self._io, self, self._root))
 
         self.vertex_buffer = self._io.read_bytes(self.header.size_vertex_buffer)
         self.vertex_buffer_2 = self._io.read_bytes(self.header.size_vertex_buffer_2)
@@ -137,13 +136,13 @@ class Mod156(KaitaiStruct):
 
         def _read(self):
             self.position = Mod156.Vec4S2(self._io, self, self._root)
-            self.bone_indices = [None] * (4)
+            self.bone_indices = []
             for i in range(4):
-                self.bone_indices[i] = self._io.read_u1()
+                self.bone_indices.append(self._io.read_u1())
 
-            self.weight_values = [None] * (4)
+            self.weight_values = []
             for i in range(4):
-                self.weight_values[i] = self._io.read_u1()
+                self.weight_values.append(self._io.read_u1())
 
             self.normal = Mod156.Vec4U1(self._io, self, self._root)
             self.tangent = Mod156.Vec4U1(self._io, self, self._root)
@@ -263,48 +262,48 @@ class Mod156(KaitaiStruct):
         @property
         def indices(self):
             if hasattr(self, '_m_indices'):
-                return self._m_indices if hasattr(self, '_m_indices') else None
+                return self._m_indices
 
             _pos = self._io.pos()
             self._io.seek(((self._root.header.offset_buffer_indices + (self.face_offset * 2)) + (self.face_position * 2)))
-            self._m_indices = [None] * (self.face_count)
+            self._m_indices = []
             for i in range(self.face_count):
-                self._m_indices[i] = self._io.read_u2le()
+                self._m_indices.append(self._io.read_u2le())
 
             self._io.seek(_pos)
-            return self._m_indices if hasattr(self, '_m_indices') else None
+            return getattr(self, '_m_indices', None)
 
         @property
         def vertices(self):
             if hasattr(self, '_m_vertices'):
-                return self._m_vertices if hasattr(self, '_m_vertices') else None
+                return self._m_vertices
 
             _pos = self._io.pos()
             self._io.seek(((self._root.header.offset_buffer_vertices + (self.vertex_position * self.vertex_stride)) + self.vertex_offset))
-            self._m_vertices = [None] * (self.num_vertices)
+            self._m_vertices = []
             for i in range(self.num_vertices):
                 _on = self.vertex_format
                 if _on == 0:
-                    self._m_vertices[i] = Mod156.Vertex0(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex0(self._io, self, self._root))
                 elif _on == 4:
-                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex(self._io, self, self._root))
                 elif _on == 6:
-                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex5(self._io, self, self._root))
                 elif _on == 7:
-                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex5(self._io, self, self._root))
                 elif _on == 1:
-                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex(self._io, self, self._root))
                 elif _on == 3:
-                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex(self._io, self, self._root))
                 elif _on == 5:
-                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex5(self._io, self, self._root))
                 elif _on == 8:
-                    self._m_vertices[i] = Mod156.Vertex5(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex5(self._io, self, self._root))
                 elif _on == 2:
-                    self._m_vertices[i] = Mod156.Vertex(self._io, self, self._root)
+                    self._m_vertices.append(Mod156.Vertex(self._io, self, self._root))
 
             self._io.seek(_pos)
-            return self._m_vertices if hasattr(self, '_m_vertices') else None
+            return getattr(self, '_m_vertices', None)
 
 
     class Material(KaitaiStruct):
@@ -317,17 +316,17 @@ class Mod156(KaitaiStruct):
         def _read(self):
             self.unk_01 = self._io.read_u2le()
             self.unk_flags = self._io.read_u2le()
-            self.unk_shorts = [None] * (10)
+            self.unk_shorts = []
             for i in range(10):
-                self.unk_shorts[i] = self._io.read_u2le()
+                self.unk_shorts.append(self._io.read_u2le())
 
-            self.texture_slots = [None] * (8)
+            self.texture_slots = []
             for i in range(8):
-                self.texture_slots[i] = self._io.read_u4le()
+                self.texture_slots.append(self._io.read_u4le())
 
-            self.unk_floats = [None] * (26)
+            self.unk_floats = []
             for i in range(26):
-                self.unk_floats[i] = self._io.read_f4le()
+                self.unk_floats.append(self._io.read_f4le())
 
 
 
@@ -414,13 +413,13 @@ class Mod156(KaitaiStruct):
 
         def _read(self):
             self.position = Mod156.Vec4S2(self._io, self, self._root)
-            self.bone_indices = [None] * (8)
+            self.bone_indices = []
             for i in range(8):
-                self.bone_indices[i] = self._io.read_u1()
+                self.bone_indices.append(self._io.read_u1())
 
-            self.weight_values = [None] * (8)
+            self.weight_values = []
             for i in range(8):
-                self.weight_values[i] = self._io.read_u1()
+                self.weight_values.append(self._io.read_u1())
 
             self.normal = Mod156.Vec4U1(self._io, self, self._root)
             self.uv = Mod156.Vec2HalfFloat(self._io, self, self._root)

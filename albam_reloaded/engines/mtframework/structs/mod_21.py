@@ -1,11 +1,10 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class Mod21(KaitaiStruct):
@@ -17,54 +16,54 @@ class Mod21(KaitaiStruct):
 
     def _read(self):
         self.header = Mod21.ModHeader(self._io, self, self._root)
-        self.bones = [None] * (self.header.num_bones)
+        self.bones = []
         for i in range(self.header.num_bones):
-            self.bones[i] = Mod21.Bone(self._io, self, self._root)
+            self.bones.append(Mod21.Bone(self._io, self, self._root))
 
-        self.parent_space_matrices = [None] * (self.header.num_bones)
+        self.parent_space_matrices = []
         for i in range(self.header.num_bones):
-            self.parent_space_matrices[i] = Mod21.Matrix4x4(self._io, self, self._root)
+            self.parent_space_matrices.append(Mod21.Matrix4x4(self._io, self, self._root))
 
-        self.inverse_bind_matrices = [None] * (self.header.num_bones)
+        self.inverse_bind_matrices = []
         for i in range(self.header.num_bones):
-            self.inverse_bind_matrices[i] = Mod21.Matrix4x4(self._io, self, self._root)
+            self.inverse_bind_matrices.append(Mod21.Matrix4x4(self._io, self, self._root))
 
         if self.header.num_bones != 0:
             self.bone_map = self._io.read_bytes(256)
 
-        self.groups = [None] * (self.header.num_groups)
+        self.groups = []
         for i in range(self.header.num_groups):
-            self.groups[i] = Mod21.Group(self._io, self, self._root)
+            self.groups.append(Mod21.Group(self._io, self, self._root))
 
         if self.header.version == 210:
-            self.material_names = [None] * (self.header.num_material_names)
+            self.material_names = []
             for i in range(self.header.num_material_names):
-                self.material_names[i] = (KaitaiStream.bytes_terminate(self._io.read_bytes(128), 0, False)).decode(u"ascii")
+                self.material_names.append((KaitaiStream.bytes_terminate(self._io.read_bytes(128), 0, False)).decode(u"ascii"))
 
 
         if self.header.version == 211:
-            self.material_hashes = [None] * (self.header.num_material_hashes)
+            self.material_hashes = []
             for i in range(self.header.num_material_hashes):
-                self.material_hashes[i] = self._io.read_u4le()
+                self.material_hashes.append(self._io.read_u4le())
 
 
-        self.meshes = [None] * (self.header.num_meshes)
+        self.meshes = []
         for i in range(self.header.num_meshes):
-            self.meshes[i] = Mod21.Mesh(self._io, self, self._root)
+            self.meshes.append(Mod21.Mesh(self._io, self, self._root))
 
         if self.header.version == 211:
             self.num_weight_bounds_211 = self._io.read_u4le()
 
         if self.header.version == 210:
-            self.weight_bounds_210 = [None] * (self.header.num_weight_bounds_210)
+            self.weight_bounds_210 = []
             for i in range(self.header.num_weight_bounds_210):
-                self.weight_bounds_210[i] = Mod21.WeightBound(self._io, self, self._root)
+                self.weight_bounds_210.append(Mod21.WeightBound(self._io, self, self._root))
 
 
         if self.header.version == 211:
-            self.weight_bounds_211 = [None] * (self.num_weight_bounds_211)
+            self.weight_bounds_211 = []
             for i in range(self.num_weight_bounds_211):
-                self.weight_bounds_211[i] = Mod21.WeightBound(self._io, self, self._root)
+                self.weight_bounds_211.append(Mod21.WeightBound(self._io, self, self._root))
 
 
         self.vertex_buffer = self._io.read_bytes(self.header.size_vertex_buffer)
@@ -151,13 +150,13 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec3S2(self._io, self, self._root)
-            self.bone_indices = [None] * (1)
+            self.bone_indices = []
             for i in range(1):
-                self.bone_indices[i] = self._io.read_u1()
+                self.bone_indices.append(self._io.read_u1())
 
-            self.todo_1 = [None] * (9)
+            self.todo_1 = []
             for i in range(9):
-                self.todo_1[i] = self._io.read_u1()
+                self.todo_1.append(self._io.read_u1())
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
 
@@ -171,9 +170,9 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo = [None] * (4)
+            self.todo = []
             for i in range(4):
-                self.todo[i] = self._io.read_u1()
+                self.todo.append(self._io.read_u1())
 
 
 
@@ -200,14 +199,14 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo_1 = [None] * (12)
+            self.todo_1 = []
             for i in range(12):
-                self.todo_1[i] = self._io.read_u1()
+                self.todo_1.append(self._io.read_u1())
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.todo_2 = [None] * (12)
+            self.todo_2 = []
             for i in range(12):
-                self.todo_2[i] = self._io.read_u1()
+                self.todo_2.append(self._io.read_u1())
 
 
 
@@ -237,22 +236,22 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.unk_01 = [None] * (8)
+            self.unk_01 = []
             for i in range(8):
-                self.unk_01[i] = self._io.read_u1()
+                self.unk_01.append(self._io.read_u1())
 
-            self.bone_indices = [None] * (4)
+            self.bone_indices = []
             for i in range(4):
-                self.bone_indices[i] = self._io.read_u1()
+                self.bone_indices.append(self._io.read_u1())
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.weight_values = [None] * (2)
+            self.weight_values = []
             for i in range(2):
-                self.weight_values[i] = self._io.read_bytes(2)
+                self.weight_values.append(self._io.read_bytes(2))
 
-            self.todo = [None] * (36)
+            self.todo = []
             for i in range(36):
-                self.todo[i] = self._io.read_u1()
+                self.todo.append(self._io.read_u1())
 
 
 
@@ -265,14 +264,14 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo_1 = [None] * (8)
+            self.todo_1 = []
             for i in range(8):
-                self.todo_1[i] = self._io.read_u1()
+                self.todo_1.append(self._io.read_u1())
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.bone_indices = [None] * (2)
+            self.bone_indices = []
             for i in range(2):
-                self.bone_indices[i] = self._io.read_bytes(2)
+                self.bone_indices.append(self._io.read_bytes(2))
 
 
 
@@ -285,18 +284,18 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.unk_01 = [None] * (8)
+            self.unk_01 = []
             for i in range(8):
-                self.unk_01[i] = self._io.read_u1()
+                self.unk_01.append(self._io.read_u1())
 
-            self.bone_indices = [None] * (4)
+            self.bone_indices = []
             for i in range(4):
-                self.bone_indices[i] = self._io.read_u1()
+                self.bone_indices.append(self._io.read_u1())
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
-            self.weight_values = [None] * (2)
+            self.weight_values = []
             for i in range(2):
-                self.weight_values[i] = self._io.read_bytes(2)
+                self.weight_values.append(self._io.read_bytes(2))
 
 
 
@@ -333,48 +332,48 @@ class Mod21(KaitaiStruct):
         @property
         def indices(self):
             if hasattr(self, '_m_indices'):
-                return self._m_indices if hasattr(self, '_m_indices') else None
+                return self._m_indices
 
             _pos = self._io.pos()
             self._io.seek(((self._root.header.offset_buffer_indices + (self.face_offset * 2)) + (self.face_position * 2)))
-            self._m_indices = [None] * (self.face_count)
+            self._m_indices = []
             for i in range(self.face_count):
-                self._m_indices[i] = self._io.read_u2le()
+                self._m_indices.append(self._io.read_u2le())
 
             self._io.seek(_pos)
-            return self._m_indices if hasattr(self, '_m_indices') else None
+            return getattr(self, '_m_indices', None)
 
         @property
         def vertices(self):
             if hasattr(self, '_m_vertices'):
-                return self._m_vertices if hasattr(self, '_m_vertices') else None
+                return self._m_vertices
 
             _pos = self._io.pos()
             self._io.seek(((self._root.header.offset_buffer_vertices + self.vertex_offset) + (self.vertex_position * self.vertex_stride)))
-            self._m_vertices = [None] * (self.num_vertices)
+            self._m_vertices = []
             for i in range(self.num_vertices):
                 _on = self.vertex_format
                 if _on == 794148925:
-                    self._m_vertices[i] = Mod21.Vertex2f55(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.Vertex2f55(self._io, self, self._root))
                 elif _on == 3273596956:
-                    self._m_vertices[i] = Mod21.VertexC31f(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexC31f(self._io, self, self._root))
                 elif _on == 3141681188:
-                    self._m_vertices[i] = Mod21.VertexBb42(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexBb42(self._io, self, self._root))
                 elif _on == 2835001368:
-                    self._m_vertices[i] = Mod21.VertexA8fa(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexA8fa(self._io, self, self._root))
                 elif _on == 349437984:
-                    self._m_vertices[i] = Mod21.Vertex14d4(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.Vertex14d4(self._io, self, self._root))
                 elif _on == 213286933:
-                    self._m_vertices[i] = Mod21.VertexCb68(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexCb68(self._io, self, self._root))
                 elif _on == 3682443284:
-                    self._m_vertices[i] = Mod21.VertexDb7d(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexDb7d(self._io, self, self._root))
                 elif _on == 2736832534:
-                    self._m_vertices[i] = Mod21.VertexA320(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexA320(self._io, self, self._root))
                 elif _on == 2962763795:
-                    self._m_vertices[i] = Mod21.VertexB098(self._io, self, self._root)
+                    self._m_vertices.append(Mod21.VertexB098(self._io, self, self._root))
 
             self._io.seek(_pos)
-            return self._m_vertices if hasattr(self, '_m_vertices') else None
+            return getattr(self, '_m_vertices', None)
 
 
     class VertexDb7d(KaitaiStruct):
@@ -386,9 +385,9 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo = [None] * (8)
+            self.todo = []
             for i in range(8):
-                self.todo[i] = self._io.read_u1()
+                self.todo.append(self._io.read_u1())
 
 
 
@@ -402,9 +401,9 @@ class Mod21(KaitaiStruct):
         def _read(self):
             self.unk_01 = self._io.read_u2le()
             self.unk_02 = self._io.read_u2le()
-            self.unk_floats = [None] * (30)
+            self.unk_floats = []
             for i in range(30):
-                self.unk_floats[i] = self._io.read_f4le()
+                self.unk_floats.append(self._io.read_f4le())
 
 
 
@@ -447,9 +446,9 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo = [None] * (20)
+            self.todo = []
             for i in range(20):
-                self.todo[i] = self._io.read_u1()
+                self.todo.append(self._io.read_u1())
 
 
 
@@ -507,9 +506,9 @@ class Mod21(KaitaiStruct):
 
         def _read(self):
             self.position = Mod21.Vec4S2(self._io, self, self._root)
-            self.todo_1 = [None] * (8)
+            self.todo_1 = []
             for i in range(8):
-                self.todo_1[i] = self._io.read_u1()
+                self.todo_1.append(self._io.read_u1())
 
             self.uv = Mod21.Vec2HalfFloat(self._io, self, self._root)
 
