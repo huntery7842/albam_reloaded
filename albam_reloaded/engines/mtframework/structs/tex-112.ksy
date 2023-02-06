@@ -2,7 +2,7 @@ meta:
   endian: le
   file-extension: tex
   id: tex_112
-  ks-version: 0.9
+  ks-version: 0.10
   title: MTFramework texture format version 112
 
 seq:

@@ -2,7 +2,7 @@ meta:
   endian: le
   file-extension: mod
   id: mod_156
-  ks-version: 0.9
+  ks-version: 0.10
   title: MTFramework model format 156
 
 seq:

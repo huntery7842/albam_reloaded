@@ -2,7 +2,7 @@ meta:
   endian: le
   file-extension: mrl
   id: mrl
-  ks-version: 0.9
+  ks-version: 0.10
   title: MTFramework material format
 seq:
   - {id: id_magic, contents: [0x4d, 0x52, 0x4c, 0x00]}

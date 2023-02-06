@@ -2,7 +2,7 @@ meta:
   endian: le
   file-extension: tex
   id: tex_157
-  ks-version: 0.9
+  ks-version: 0.10
   title: MTFramework texture format version 157
 
 seq:
