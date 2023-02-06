@@ -20,23 +20,23 @@ class Tex157(KaitaiStruct):
             raise kaitaistruct.ValidationNotEqualError(b"\x54\x45\x58\x00", self.id_magic, self._io, u"/seq/0")
         self.packed_data_1 = self._io.read_u4le()
         self.packed_data_2 = self._io.read_u4le()
-        self.num_textures = self._io.read_u1()
-        self.format = self._io.read_u1()
+        self.num_images = self._io.read_u1()
+        self.compression_format = self._io.read_u1()
         self.unk_01 = self._io.read_u1()
         self.unk_02 = self._io.read_u1()
         self.mipmap_offsets = []
-        for i in range(self.num_mipmaps):
+        for i in range((self.num_mipmaps_per_image * self.num_images)):
             self.mipmap_offsets.append(self._io.read_u4le())
 
         self.dds_data = self._io.read_bytes_full()
 
     @property
-    def num_mipmaps(self):
-        if hasattr(self, '_m_num_mipmaps'):
-            return self._m_num_mipmaps
+    def num_mipmaps_per_image(self):
+        if hasattr(self, '_m_num_mipmaps_per_image'):
+            return self._m_num_mipmaps_per_image
 
-        self._m_num_mipmaps = (self.packed_data_2 & 63)
-        return getattr(self, '_m_num_mipmaps', None)
+        self._m_num_mipmaps_per_image = (self.packed_data_2 & 63)
+        return getattr(self, '_m_num_mipmaps_per_image', None)
 
     @property
     def width(self):

@@ -168,8 +168,8 @@ def build_blender_textures(arc, mod, mrl=None):
             dds_header = DDSHeader(
                 dwHeight=tex.height,
                 dwWidth=tex.width,
-                dwMipMapCount=tex.num_mipmaps_per_image // tex.num_images,
                 pixelfmt_dwFourCC=TEX_FORMAT_MAPPER[tex.compression_format],
+                dwMipMapCount=tex.num_mipmaps_per_image // tex.num_images,
             )
             dds_header.set_constants()
             dds_header.set_variables()
