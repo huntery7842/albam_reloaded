@@ -32,12 +32,12 @@ class AlbamImportOperator(bpy.types.Operator):
     files: FILES
     filter_glob: FILTER_GLOB
 
-    def invoke(self, context, event):
+    def invoke(self, context, event):  # pragma: no cover
         wm = context.window_manager
         wm.fileselect_add(self)
         return {"RUNNING_MODAL"}
 
-    def execute(self, context):
+    def execute(self, context):  # pragma: no cover
         to_import = [
             os.path.join(self.directory, f.name) for f in self.files
         ]  # combine path to file and file name list to a new list
@@ -47,7 +47,7 @@ class AlbamImportOperator(bpy.types.Operator):
         return {"FINISHED"}
 
     @staticmethod
-    def _import_file(file_path):
+    def _import_file(file_path):  # pragma: no cover
 
         with open(file_path, "rb") as f:
             data = f.read()
