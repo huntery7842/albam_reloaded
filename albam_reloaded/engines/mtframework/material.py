@@ -136,16 +136,6 @@ def _find_texture_index(mtfw_material, texture_type, from_mrl=False):
     return tex_index
 
 
-def _get_path_to_albam():
-    for mod in addon_utils.modules():
-        if mod.bl_info["name"] == "Albam Reloaded":
-            filepath = mod.__file__
-            path = os.path.split(filepath)[0]
-            return path
-        else:
-            pass
-
-
 def build_blender_textures(arc, mod, mrl=None):
     textures = [None]  # materials refer to textures in index-1
     tex_type = EXTENSION_TO_FILE_ID['tex']
@@ -477,20 +467,3 @@ def _infer_mrl(arc, mod_file_entry):
         return
     mrl = Mrl(KaitaiStream(io.BytesIO(mrl_file)))
     return mrl
-
-
-def _handle_missing_texture(path, index):
-    texture_name_no_extension = os.path.splitext(os.path.basename(path))[0]
-    texture_name_no_extension = str(index).zfill(2) + texture_name_no_extension
-    texture = bpy.data.textures.new(texture_name_no_extension, type="IMAGE")
-    texture.use_fake_user = True
-
-    image_path = _get_path_to_albam()
-    image_path = os.path.join(image_path, "resourses", "missing texture.dds")
-    dummy_image = bpy.data.images.load(image_path)
-
-    texture.image = dummy_image
-    texture_node_name = texture_name_no_extension + ".dds"
-    texture.image.name = texture_node_name
-
-    return texture

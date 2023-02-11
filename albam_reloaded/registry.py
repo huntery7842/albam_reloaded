@@ -10,8 +10,6 @@ class BlenderRegistry:
         def decorator(f):
             if func_type == "import":
                 self.import_registry[identifier] = f
-            elif func_type == "export":
-                self.export_registry[identifier] = f
             else:
                 raise TypeError("func_type {} not valid.".format(func_type))
             return f

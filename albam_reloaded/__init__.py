@@ -29,14 +29,9 @@ def register():
     importlib.import_module("albam_reloaded.engines.mtframework.archive")
     for cls in classes_to_register:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.albam_scene_meshes = bpy.props.PointerProperty(type=bpy.types.Object)
 
 
 def unregister():
     for cls in reversed(classes_to_register):
         bpy.utils.unregister_class(cls)
     sys.path.remove(VENDOR_DIR)
-
-
-if __name__ == "__main__":
-    register()
